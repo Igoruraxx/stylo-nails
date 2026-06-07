@@ -124,6 +124,14 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
   // Filter state
   const [filtroCategoria, setFiltroCategoria] = useState<number | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Edit modal state
+  const [editModalProd, setEditModalProd] = useState<Produto | null>(null)
+  const [editModalData, setEditModalData] = useState<Partial<Produto>>({})
+  const [editModalImg, setEditModalImg] = useState<File | null>(null)
+  const [editModalImgPreview, setEditModalImgPreview] = useState('')
+  const editFileInputRef = useRef<HTMLInputElement>(null)
 
   const showFeedback = (msg: string) => {
     setFeedback(msg)
@@ -252,22 +260,48 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   }
 
   /* ── Produto handlers ── */
-  const startEditProd = (prod: Produto) => {
-    setEditProdId(prod.id)
-    setEditProd({ nome: prod.nome, preco: prod.preco, promocao: prod.promocao, preco_promocional: prod.preco_promocional, destaque: prod.destaque })
+  const openEditModal = (prod: Produto) => {
+    setEditModalProd(prod)
+    setEditModalData({
+      nome: prod.nome,
+      preco: prod.preco,
+      promocao: prod.promocao,
+      preco_promocional: prod.preco_promocional,
+      destaque: prod.destaque,
+      descricao: prod.descricao,
+    })
+    setEditModalImg(null)
+    setEditModalImgPreview('')
   }
 
   const saveProd = async () => {
-    if (editProdId === null) return
-    setProdutos(prev => prev.map(p => p.id === editProdId ? { ...p, ...editProd } : p))
-    await saveToServer('produtos', editProdId, {
-      nome: editProd.nome,
-      preco: editProd.preco,
-      promocao: editProd.promocao,
-      preco_promocional: editProd.promocao ? editProd.preco_promocional : null,
-      destaque: editProd.destaque,
-    })
-    setEditProdId(null)
+    if (!editModalProd) return
+    const id = editModalProd.id
+    let imagem_url = editModalProd.imagem_url
+
+    // Upload new image if selected
+    if (editModalImg) {
+      const cat = categorias.find(c => c.id === editModalProd.categoria_id)
+      const pasta = cat?.slug || `cat-${editModalProd.categoria_id}`
+      const url = await uploadImage(editModalImg, pasta)
+      if (url) imagem_url = url
+    }
+
+    const data: any = {
+      nome: editModalData.nome,
+      preco: editModalData.preco,
+      promocao: editModalData.promocao,
+      preco_promocional: editModalData.promocao ? editModalData.preco_promocional : null,
+      destaque: editModalData.destaque,
+      descricao: editModalData.descricao || null,
+    }
+    if (imagem_url !== editModalProd.imagem_url) {
+      data.imagem_url = imagem_url
+    }
+
+    setProdutos(prev => prev.map(p => p.id === id ? { ...p, ...data, imagem_url: imagem_url || p.imagem_url } : p))
+    await saveToServer('produtos', id, data)
+    setEditModalProd(null)
   }
 
   const togglePromocao = (id: number) => {
@@ -323,10 +357,15 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     }
   }
 
-  // Filtered products
-  const produtosFiltrados = filtroCategoria
+  // Filtered + searched products
+  const produtosFiltrados = (filtroCategoria
     ? produtos.filter(p => p.categoria_id === filtroCategoria)
     : produtos
+  ).filter(p => {
+    if (!searchQuery.trim()) return true
+    const q = searchQuery.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    return p.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q)
+  })
 
   const produtosPorCategoria = filtroCategoria 
     ? [{ categoria: categorias.find(c => c.id === filtroCategoria), produtos: produtosFiltrados }]
@@ -469,10 +508,27 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <h2 className="font-serif text-xl font-semibold text-[#C9A96E]">📦 Produtos</h2>
               
+              {/* Busca */}
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="🔍 Buscar produto por nome..."
+                  className="w-full rounded-lg border border-[#C9A96E]/20 bg-[#2E2820] pl-9 pr-4 py-2 text-xs text-[#F8F1E9] placeholder-[#E8D5B0]/30 outline-none focus:border-[#B8860B] focus:ring-1 focus:ring-[#B8860B]/40 transition-all"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[#E8D5B0]/30 hover:text-[#C9A96E]">
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
               <select
                 value={filtroCategoria ?? ''}
                 onChange={e => setFiltroCategoria(e.target.value ? Number(e.target.value) : null)}
-                className="ml-auto rounded-lg border border-[#C9A96E]/20 bg-[#2E2820] px-3 py-1.5 text-xs text-[#E8D5B0] outline-none focus:ring-2 focus:ring-[#C9A96E]/50"
+                className="rounded-lg border border-[#C9A96E]/20 bg-[#2E2820] px-3 py-2 text-xs text-[#E8D5B0] outline-none focus:ring-2 focus:ring-[#C9A96E]/50"
               >
                 <option value="">Todas as categorias</option>
                 {categorias.map(cat => (
@@ -588,80 +644,28 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                   <div key={categoria.id}>
                     <h3 className="mb-2 text-sm font-semibold text-[#C9A96E]/80">{categoria.nome}</h3>
                     <div className="space-y-1.5">
-                      {prods.map(prod => {
-                        const editing = editProdId === prod.id
-                        return (
-                          <div key={prod.id} className="rounded-xl border border-[#C9A96E]/10 bg-[#2E2820] px-4 py-2.5 transition-all hover:border-[#C9A96E]/20">
-                            {editing ? (
-                              <div className="space-y-3">
-                                <div className="flex items-center gap-3">
-                                  <span className="shrink-0 text-xs text-[#E8D5B0]/40">#{prod.id}</span>
-                                  <input type="text" value={editProd.nome ?? ''}
-                                    onChange={e => setEditProd(p => ({ ...p, nome: e.target.value }))}
-                                    className="flex-1 rounded-md border border-[#C9A96E]/30 bg-[#1A1612] px-3 py-1.5 text-sm text-[#F8F1E9] outline-none focus:ring-2 focus:ring-[#C9A96E]/50"
-                                    placeholder="Nome do produto" />
-                                </div>
-                                <div className="flex flex-wrap items-center gap-3">
-                                  <div className="flex items-center gap-2">
-                                    <label className="text-xs text-[#E8D5B0]/50">Preço:</label>
-                                    <input type="number" step="0.01" value={editProd.preco ?? 0}
-                                      onChange={e => setEditProd(p => ({ ...p, preco: parseFloat(e.target.value) || 0 }))}
-                                      className="w-24 rounded-md border border-[#C9A96E]/30 bg-[#1A1612] px-3 py-1.5 text-sm text-[#F8F1E9] outline-none focus:ring-2 focus:ring-[#C9A96E]/50" />
-                                  </div>
-                                  <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" checked={editProd.promocao ?? false}
-                                      onChange={() => setEditProd(p => {
-                                        const nova = !p.promocao
-                                        return { ...p, promocao: nova, preco_promocional: nova ? Number(((p.preco ?? 0) * 0.8).toFixed(2)) : null }
-                                      })}
-                                      className="h-4 w-4 rounded border-[#C9A96E]/30 bg-[#1A1612] text-[#C9A96E] focus:ring-[#C9A96E]/50" />
-                                    <span className="text-xs text-[#E8D5B0]/70">Em promoção</span>
-                                  </label>
-                                  {editProd.promocao && (
-                                    <div className="flex items-center gap-2">
-                                      <label className="text-xs text-[#E8D5B0]/50">Preço promocional:</label>
-                                      <input type="number" step="0.01" value={editProd.preco_promocional ?? 0}
-                                        onChange={e => setEditProd(p => ({ ...p, preco_promocional: parseFloat(e.target.value) || 0 }))}
-                                        className="w-24 rounded-md border border-red-500/30 bg-[#1A1612] px-3 py-1.5 text-sm text-red-300 outline-none focus:ring-2 focus:ring-red-500/50" />
-                                    </div>
-                                  )}
-                                  <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" checked={editProd.destaque ?? false}
-                                      onChange={() => setEditProd(p => ({ ...p, destaque: !p.destaque }))}
-                                      className="h-4 w-4 rounded border-[#C9A96E]/30 bg-[#1A1612] text-[#C9A96E] focus:ring-[#C9A96E]/50" />
-                                    <Star size={12} className="text-[#C9A96E]" />
-                                    <span className="text-xs text-[#E8D5B0]/70">Destaque</span>
-                                  </label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <button onClick={saveProd} className="flex items-center gap-1.5 rounded-md bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-400 transition-all hover:bg-green-500/20"><Save size={14} /> Salvar</button>
-                                  <button onClick={() => { setEditProdId(null); setEditProd({}) }} className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-red-400/60 transition-all hover:bg-red-500/10 hover:text-red-400"><X size={14} /> Cancelar</button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-3">
-                                {prod.imagem_url && (
-                                  <img src={prod.imagem_url} alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
-                                )}
-                                <span className="shrink-0 text-xs text-[#E8D5B0]/30">#{prod.id}</span>
-                                <span className="min-w-0 flex-1 truncate text-sm font-medium">{prod.nome}</span>
-                                <span className="shrink-0 text-sm text-[#C9A96E]">{formatPrice(prod.preco)}</span>
-                                <div className="flex shrink-0 items-center gap-1.5">
-                                  {prod.promocao && <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold text-red-400">PROMO</span>}
-                                  {prod.destaque && <span className="rounded-full bg-[#C9A96E]/15 px-2 py-0.5 text-[10px] font-semibold text-[#C9A96E]">DESTAQUE</span>}
-                                </div>
-                                <div className="flex shrink-0 items-center gap-1">
-                                  <button onClick={() => startEditProd(prod)} className="rounded-md p-1.5 text-[#E8D5B0]/40 transition-all hover:bg-[#1A1612] hover:text-[#C9A96E]"><Pencil size={16} /></button>
-                                  <button onClick={() => togglePromocao(prod.id)}
-                                    className={`rounded-md p-1.5 transition-all ${prod.promocao ? 'text-red-400 hover:bg-red-500/10' : 'text-[#E8D5B0]/40 hover:bg-[#1A1612] hover:text-[#C9A96E]'}`}>
-                                    <Tag size={16} />
-                                  </button>
-                                </div>
-                              </div>
-                            )}
+                      {prods.map(prod => (
+                        <div key={prod.id}
+                          className="flex items-center gap-3 rounded-xl border border-[#C9A96E]/10 bg-[#2E2820] px-4 py-2.5 transition-all hover:border-[#C9A96E]/20 hover:bg-[#2E2820]/80 cursor-pointer"
+                          onClick={() => openEditModal(prod)}>
+                          {prod.imagem_url ? (
+                            <img src={prod.imagem_url} alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
+                          ) : (
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#1A1612] text-lg opacity-30">💅</div>
+                          )}
+                          <span className="shrink-0 text-[10px] text-[#E8D5B0]/30 w-7">#{prod.id}</span>
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium">{prod.nome}</span>
+                          <span className="shrink-0 text-sm text-[#C9A96E]">{formatPrice(prod.preco)}</span>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            {prod.promocao && <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold text-red-400">PROMO</span>}
+                            {prod.destaque && <span className="rounded-full bg-[#C9A96E]/15 px-2 py-0.5 text-[10px] font-semibold text-[#C9A96E]">DESTAQUE</span>}
                           </div>
-                        )
-                      })}
+                          <button onClick={(e) => { e.stopPropagation(); openEditModal(prod) }}
+                            className="rounded-md p-1.5 text-[#E8D5B0]/40 transition-all hover:bg-[#1A1612] hover:text-[#C9A96E]">
+                            <Pencil size={16} />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )
@@ -713,6 +717,135 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
             </div>
             <p className="mt-3 text-xs text-[#E8D5B0]/30">* Prévia ilustrativa baseada nos dados reais do banco.</p>
           </section>
+        )}
+
+        {/* ═══ EDIT PRODUCT MODAL ═══ */}
+        {editModalProd && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-sm"
+            onClick={() => setEditModalProd(null)}>
+            <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[#C9A96E]/20 bg-[#2E2820] shadow-2xl"
+              onClick={e => e.stopPropagation()}>
+              
+              {/* Fechar */}
+              <button onClick={() => setEditModalProd(null)}
+                className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/60 hover:bg-black/70 hover:text-white transition-all">
+                <X size={18} />
+              </button>
+
+              <div className="grid md:grid-cols-2">
+                {/* ── Foto grande ── */}
+                <div className="relative flex min-h-[250px] md:min-h-full items-center justify-center bg-[#1A1612] rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none overflow-hidden">
+                  {editModalImgPreview ? (
+                    <img src={editModalImgPreview} alt="Preview" className="h-full w-full object-cover" />
+                  ) : editModalProd.imagem_url ? (
+                    <img src={editModalProd.imagem_url} alt={editModalProd.nome} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-[#E8D5B0]/20">
+                      <span className="text-6xl">💅</span>
+                      <span className="text-xs">Sem foto</span>
+                    </div>
+                  )}
+                  {/* Upload na foto */}
+                  <button onClick={() => editFileInputRef.current?.click()}
+                    className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-black/60 px-3 py-2 text-xs text-white/70 hover:bg-black/80 hover:text-white backdrop-blur-sm transition-all">
+                    <Upload size={14} /> {editModalProd.imagem_url ? 'Trocar' : 'Adicionar foto'}
+                  </button>
+                  <input ref={editFileInputRef} type="file" accept="image/*" onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    setEditModalImg(file)
+                    const reader = new FileReader()
+                    reader.onload = () => setEditModalImgPreview(reader.result as string)
+                    reader.readAsDataURL(file)
+                  }} className="hidden" />
+                </div>
+
+                {/* ── Informações ── */}
+                <div className="flex flex-col gap-5 p-6">
+                  {/* ID + Categoria */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-[#E8D5B0]/30">#{editModalProd.id}</span>
+                    <span className="rounded-full bg-[#C9A96E]/10 px-3 py-1 text-[10px] font-medium text-[#C9A96E]">
+                      {categorias.find(c => c.id === editModalProd.categoria_id)?.nome || `Cat ${editModalProd.categoria_id}`}
+                    </span>
+                  </div>
+
+                  {/* Nome */}
+                  <div>
+                    <label className="mb-1 block text-[10px] uppercase tracking-wider text-[#E8D5B0]/40">Nome</label>
+                    <input type="text" value={editModalData.nome ?? ''}
+                      onChange={e => setEditModalData(p => ({ ...p, nome: e.target.value }))}
+                      className="w-full rounded-lg border border-[#C9A96E]/20 bg-[#1A1612] px-4 py-2.5 text-sm text-[#F8F1E9] outline-none focus:border-[#B8860B] focus:ring-1 focus:ring-[#B8860B]/40 font-medium" />
+                  </div>
+
+                  {/* Descrição */}
+                  <div>
+                    <label className="mb-1 block text-[10px] uppercase tracking-wider text-[#E8D5B0]/40">Descrição</label>
+                    <textarea value={editModalData.descricao ?? ''} rows={2}
+                      onChange={e => setEditModalData(p => ({ ...p, descricao: e.target.value }))}
+                      className="w-full resize-none rounded-lg border border-[#C9A96E]/20 bg-[#1A1612] px-4 py-2.5 text-sm text-[#F8F1E9] placeholder-[#E8D5B0]/30 outline-none focus:border-[#B8860B] focus:ring-1 focus:ring-[#B8860B]/40"
+                      placeholder="Descrição do produto..." />
+                  </div>
+
+                  {/* Preços */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-[10px] uppercase tracking-wider text-[#E8D5B0]/40">Preço (R$)</label>
+                      <input type="number" step="0.01" value={editModalData.preco ?? 0}
+                        onChange={e => setEditModalData(p => ({ ...p, preco: parseFloat(e.target.value) || 0 }))}
+                        className="w-full rounded-lg border border-[#C9A96E]/20 bg-[#1A1612] px-4 py-2.5 text-sm text-[#F8F1E9] outline-none focus:border-[#B8860B] focus:ring-1 focus:ring-[#B8860B]/40" />
+                    </div>
+                    {editModalData.promocao && (
+                      <div>
+                        <label className="mb-1 block text-[10px] uppercase tracking-wider text-red-400/60">Preço Promocional</label>
+                        <input type="number" step="0.01" value={editModalData.preco_promocional ?? 0}
+                          onChange={e => setEditModalData(p => ({ ...p, preco_promocional: parseFloat(e.target.value) || 0 }))}
+                          className="w-full rounded-lg border border-red-500/30 bg-[#1A1612] px-4 py-2.5 text-sm text-red-300 outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/40" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Toggles */}
+                  <div className="flex flex-wrap items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={editModalData.promocao ?? false}
+                        onChange={() => setEditModalData(p => {
+                          const nova = !p.promocao
+                          return { ...p, promocao: nova, preco_promocional: nova ? Number(((p.preco ?? 0) * 0.8).toFixed(2)) : null }
+                        })}
+                        className="h-4 w-4 rounded border-[#C9A96E]/30 bg-[#1A1612] text-[#C9A96E] focus:ring-[#C9A96E]/50" />
+                      <span className="text-xs text-[#E8D5B0]/70">Em promoção</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={editModalData.destaque ?? false}
+                        onChange={() => setEditModalData(p => ({ ...p, destaque: !p.destaque }))}
+                        className="h-4 w-4 rounded border-[#C9A96E]/30 bg-[#1A1612] text-[#C9A96E] focus:ring-[#C9A96E]/50" />
+                      <Star size={12} className="text-[#C9A96E]" />
+                      <span className="text-xs text-[#E8D5B0]/70">Destaque</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={editModalData.ativo ?? true}
+                        onChange={() => setEditModalData(p => ({ ...p, ativo: !(p.ativo ?? true) }))}
+                        className="h-4 w-4 rounded border-[#C9A96E]/30 bg-[#1A1612] text-[#C9A96E] focus:ring-[#C9A96E]/50" />
+                      <span className="text-xs text-[#E8D5B0]/70">Ativo</span>
+                    </label>
+                  </div>
+
+                  {/* Ações */}
+                  <div className="mt-auto flex items-center gap-3 pt-3 border-t border-[#C9A96E]/10">
+                    <button onClick={saveProd} disabled={saving || uploading}
+                      className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#B8860B] to-[#DAA520] px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed">
+                      {saving || uploading ? 'Salvando...' : <><Save size={16} /> Salvar Alterações</>}
+                    </button>
+                    <button onClick={() => setEditModalProd(null)}
+                      className="flex items-center gap-1.5 rounded-lg px-5 py-3 text-sm font-medium text-red-400/60 transition-all hover:bg-red-500/10 hover:text-red-400">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         <div className="mt-10 border-t border-[#C9A96E]/10 py-6 text-center text-xs text-[#E8D5B0]/30">
