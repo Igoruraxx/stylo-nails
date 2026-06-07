@@ -5,32 +5,43 @@ import StoreLayout from '@/components/store-layout'
 import ProductCard from '@/components/product-card'
 import type { Categoria, Produto } from '@/types'
 
-const SUPABASE_URL = 'https://blwzprxihmienukhsapw.supabase.co'
+const API_URL = 'https://blwzprxihmienukhsapw.supabase.co/rest/v1'
 const ANON_KEY = 'sb_publishable_Md8oCk2-vqoTLqFTKmfxHA_pJ1eQhvA'
+
+async function sbGet<T>(path: string): Promise<T[]> {
+  try {
+    const res = await fetch(`${API_URL}/${path}`, {
+      headers: {
+        apikey: ANON_KEY,
+        Authorization: `Bearer ${ANON_KEY}`,
+      },
+      next: { revalidate: 30 },
+    })
+    if (!res.ok) {
+      console.error(`Supabase fetch error: ${res.status} for ${path}`)
+      return []
+    }
+    return res.json()
+  } catch (e) {
+    console.error('Supabase fetch failed:', e)
+    return []
+  }
+}
 
 interface Props {
   params: Promise<{ slug: string }>
 }
 
-async function fetchFrom<T>(table: string, query: string): Promise<T[]> {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
-    headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` },
-    next: { revalidate: 60 },
-  })
-  if (!res.ok) return []
-  return res.json()
-}
-
 export default async function CategoriaPage({ params }: Props) {
   const { slug } = await params
 
-  const categorias = await fetchFrom<Categoria>('categorias', 'select=*&ativo=eq.true&order=ordem')
-  const catList = await fetchFrom<Categoria>('categorias', `select=*&slug=eq.${slug}&ativo=eq.true`)
+  const categorias = await sbGet<Categoria>(`categorias?select=*&ativo=eq.true&order=ordem`)
+  const catList = await sbGet<Categoria>(`categorias?select=*&slug=eq.${slug}&ativo=eq.true`)
 
   const categoria = catList[0]
   if (!categoria) notFound()
 
-  const produtos = await fetchFrom<Produto>('produtos', `select=*&categoria_id=eq.${categoria.id}&ativo=eq.true&order=ordem`)
+  const produtos = await sbGet<Produto>(`produtos?select=*&categoria_id=eq.${categoria.id}&ativo=eq.true&order=ordem`)
 
   return (
     <>
@@ -52,7 +63,7 @@ export default async function CategoriaPage({ params }: Props) {
             {categoria.nome}
           </h1>
 
-          {produtos.length > 0 ? (
+          {produtos && produtos.length > 0 ? (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {produtos.map((produto: Produto) => (
                 <ProductCard key={produto.id} produto={produto} />
