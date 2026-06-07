@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Header from '@/components/header'
-import StoreLayout from '@/components/store-layout'
 import ProductCard from '@/components/product-card'
 import type { Categoria, Produto } from '@/types'
 
@@ -17,7 +16,6 @@ export default function CategoriaPage() {
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -75,7 +73,7 @@ export default function CategoriaPage() {
   if (notFound || !categoria) {
     return (
       <>
-        <Header />
+        <Header categorias={categorias} />
         <div className="flex h-screen flex-col items-center justify-center gap-4">
           <span className="text-6xl">💅</span>
           <h1 className="font-serif text-2xl text-[#C9A96E]">Página não encontrada</h1>
@@ -89,35 +87,39 @@ export default function CategoriaPage() {
 
   return (
     <>
-      <Header onToggleSidebar={() => setSidebarOpen(v => !v)} />
-      <StoreLayout categorias={categorias} sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen(v => !v)}>
-        <div className="px-4 py-8 sm:px-6 lg:px-10">
-          <nav className="mb-6 text-sm text-white/50" aria-label="Breadcrumb">
-            <Link href="/" className="transition-colors hover:text-[#C9A96E]">Home</Link>
-            <span className="mx-2">&gt;</span>
-            <span className="text-white/80">{categoria.nome}</span>
-          </nav>
+      <Header categorias={categorias} />
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Breadcrumb */}
+        <nav className="mb-6 text-sm text-white/50" aria-label="Breadcrumb">
+          <Link href="/" className="transition-colors hover:text-[#C9A96E]">Home</Link>
+          <span className="mx-2 text-white/30">/</span>
+          <span className="text-[#C9A96E]">{categoria.nome}</span>
+        </nav>
 
-          {categoria.descricao && (
-            <p className="mb-6 max-w-2xl text-white/60">{categoria.descricao}</p>
-          )}
-
-          <h1 className="mb-8 font-serif text-3xl font-bold text-[#C9A96E] sm:text-4xl"
-            style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+        {/* Header da categoria */}
+        <div className="mb-8">
+          <h1 className="font-serif text-3xl font-bold text-[#C9A96E] sm:text-4xl">
             {categoria.nome}
           </h1>
-
-          {produtos.length > 0 ? (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {produtos.map((produto) => (
-                <ProductCard key={produto.id} produto={produto} />
-              ))}
-            </div>
-          ) : (
-            <p className="py-16 text-center text-white/50">Nenhum produto encontrado nesta categoria.</p>
+          {categoria.descricao && (
+            <p className="mt-2 max-w-2xl text-white/60">{categoria.descricao}</p>
           )}
         </div>
-      </StoreLayout>
+
+        {/* Grid de produtos */}
+        {produtos.length > 0 ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {produtos.map((produto) => (
+              <ProductCard key={produto.id} produto={produto} />
+            ))}
+          </div>
+        ) : (
+          <div className="py-20 text-center">
+            <span className="text-4xl opacity-30">📦</span>
+            <p className="mt-4 text-white/50">Nenhum produto encontrado nesta categoria.</p>
+          </div>
+        )}
+      </main>
     </>
   )
 }
