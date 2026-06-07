@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { Toaster, toast } from 'sonner'
+import { ArrowUpDown } from 'lucide-react'
 import Header from '@/components/header'
 import ProductCard from '@/components/product-card'
 import { useCart } from '@/lib/cart-context'
@@ -20,6 +21,7 @@ export default function Home() {
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<'preco_asc' | 'preco_desc' | 'vendas'>('vendas')
 
   useEffect(() => {
     let cancelled = false
@@ -70,6 +72,35 @@ export default function Home() {
       duration: 3000,
     })
   }
+
+  /* ── Sort dos produtos dentro de cada categoria ── */
+  const sortedProdutosPorCategoria = useMemo(() => {
+    const map = new Map<number, Produto[]>()
+    for (const [catId, prods] of produtosPorCategoria) {
+      let sorted = [...prods]
+      switch (sortBy) {
+        case 'preco_asc':
+          sorted.sort((a, b) => {
+            const pa = a.promocao && a.preco_promocional ? a.preco_promocional : a.preco
+            const pb = b.promocao && b.preco_promocional ? b.preco_promocional : b.preco
+            return pa - pb
+          })
+          break
+        case 'preco_desc':
+          sorted.sort((a, b) => {
+            const pa = a.promocao && a.preco_promocional ? a.preco_promocional : a.preco
+            const pb = b.promocao && b.preco_promocional ? b.preco_promocional : b.preco
+            return pb - pa
+          })
+          break
+        case 'vendas':
+          sorted.sort((a, b) => (b.total_vendas || 0) - (a.total_vendas || 0))
+          break
+      }
+      map.set(catId, sorted)
+    }
+    return map
+  }, [produtosPorCategoria, sortBy])
 
   if (loading) {
     return (
@@ -190,11 +221,30 @@ export default function Home() {
           </section>
         )}
 
+        {/* ── Sort Controls ── */}
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="font-serif text-xl font-semibold text-[#C9A96E] sm:text-2xl">
+            Todos os Produtos
+          </h2>
+          <div className="flex items-center gap-2">
+            <ArrowUpDown size={14} className="text-[#E8D5B0]/40" />
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as typeof sortBy)}
+              className="rounded-lg border border-[#C9A96E]/20 bg-[#2E2820] px-3 py-1.5 text-xs text-[#E8D5B0] outline-none focus:ring-2 focus:ring-[#C9A96E]/50 appearance-none cursor-pointer"
+            >
+              <option value="vendas">📈 Mais Vendidos</option>
+              <option value="preco_asc">💰 Menor Preço</option>
+              <option value="preco_desc">💰 Maior Preço</option>
+            </select>
+          </div>
+        </div>
+
         {/* Categorias com seus produtos */}
         {categorias
-          .filter((cat) => cat.ativo && produtosPorCategoria.has(cat.id))
+          .filter((cat) => cat.ativo && sortedProdutosPorCategoria.has(cat.id))
           .map((categoria) => {
-            const prods = produtosPorCategoria.get(categoria.id)!
+            const prods = sortedProdutosPorCategoria.get(categoria.id)!
             return (
               <section key={categoria.id} className="mb-12">
                 <div className="mb-4 flex items-baseline justify-between">

@@ -120,6 +120,38 @@ export default function CheckoutPage() {
     const mensagem = buildWhatsAppMessage()
     const link = `https://wa.me/${STORE_WHATSAPP}?text=${mensagem}`
 
+    // Salvar pedido no banco e incrementar vendas
+    ;(async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase')
+        const supabase = createClient()
+        
+        await supabase.from('pedidos').insert({
+          cliente_nome: nome.trim(),
+          cliente_whatsapp: '',
+          itens: itens.map(i => ({ produto_id: i.produto.id, nome: i.produto.nome, quantidade: i.quantidade, preco: getPreco(i) })),
+          total,
+          forma_pagamento: formaPagamento || 'Não informado',
+          observacao: `${endereco.trim()}${observacao.trim() ? ' | ' + observacao.trim() : ''}`,
+          status: 'pendente',
+        })
+
+        for (const item of itens) {
+          // Pega valor atual e incrementa
+          const { data: prod } = await supabase.from('produtos')
+            .select('total_vendas')
+            .eq('id', item.produto.id)
+            .maybeSingle()
+          const qtd = (prod?.total_vendas || 0) + item.quantidade
+          await supabase.from('produtos')
+            .update({ total_vendas: qtd })
+            .eq('id', item.produto.id)
+        }
+      } catch (e) {
+        console.warn('Erro ao salvar pedido:', e)
+      }
+    })()
+
     toast.success('Pedido gerado com sucesso!', {
       description: 'Abrindo WhatsApp para enviar seu pedido...',
       duration: 4000,

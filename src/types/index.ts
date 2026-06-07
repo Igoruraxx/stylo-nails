@@ -20,6 +20,7 @@ export interface Produto {
   ordem: number
   ativo: boolean
   destaque: boolean
+  total_vendas?: number
 }
 
 export interface CartItem {
