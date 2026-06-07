@@ -35,18 +35,10 @@ interface ProductCardProps {
 
 export default function ProductCard({ produto }: ProductCardProps) {
   const { adicionar } = useCart()
-  const [imgReady, setImgReady] = useState(false)
   const [imgError, setImgError] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
 
   const temFoto = !!produto.imagem_url && !imgError
-
-  // Check if the image is already cached when component mounts
-  useEffect(() => {
-    if (temFoto && imgRef.current?.complete) {
-      setImgReady(true)
-    }
-  }, [temFoto])
 
   const precoAtual =
     produto.promocao && produto.preco_promocional
@@ -55,37 +47,22 @@ export default function ProductCard({ produto }: ProductCardProps) {
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-xl border border-white/5 bg-[#2E2820]/60 backdrop-blur-lg transition-all duration-300 hover:scale-[1.03] hover:border-[#C9A96E]/30 hover:shadow-xl hover:shadow-[#C9A96E]/10">
-      <div className="relative flex h-48 items-center justify-center overflow-hidden bg-[#2E2820]">
-        {temFoto ? (
-          <>
-            <img
-              ref={imgRef}
-              src={produto.imagem_url!}
-              alt={produto.nome}
-              className={`h-full w-full object-cover transition-all duration-500 group-hover:scale-110 ${
-                imgReady ? 'opacity-100' : 'opacity-0'
-              }`}
-              onLoad={() => setImgReady(true)}
-              onError={() => setImgError(true)}
-              loading="lazy"
-            />
-            {!imgReady && (
-              <div className={`absolute inset-0 bg-gradient-to-br ${getGradient(produto.categoria_id)}`}>
-                <div className="shimmer pointer-events-none absolute inset-0" />
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-3xl opacity-20">💅</span>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className={`absolute inset-0 bg-gradient-to-br ${getGradient(produto.categoria_id)}`}>
-            <div className="shimmer pointer-events-none absolute inset-0" />
-          </div>
+      <div className={`relative flex h-48 items-center justify-center overflow-hidden bg-gradient-to-br ${getGradient(produto.categoria_id)}`}>
+        {temFoto && (
+          <img
+            ref={imgRef}
+            src={produto.imagem_url!}
+            alt={produto.nome}
+            className="absolute inset-0 z-10 h-full w-full object-cover transition-all duration-500 group-hover:scale-110"
+            onError={() => setImgError(true)}
+            loading="lazy"
+          />
         )}
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#2E2820] to-transparent" />
+        <div className="shimmer pointer-events-none absolute inset-0 z-0" />
 
         {produto.promocao && (
-          <span className="absolute left-3 top-3 z-10 animate-pulse rounded-full bg-red-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+          <span className="absolute left-3 top-3 z-20 animate-pulse rounded-full bg-red-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
             🔥 OFERTA
           </span>
         )}
