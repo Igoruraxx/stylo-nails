@@ -1,16 +1,14 @@
-'use client'
-
-import { useState, useMemo } from 'react'
-import { Toaster, toast } from 'sonner'
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import Header from '@/components/header'
-import Sidebar from '@/components/sidebar'
-import CartPanel from '@/components/cart-panel'
+import StoreLayout from '@/components/store-layout'
 import ProductCard from '@/components/product-card'
 import type { Categoria, Produto } from '@/types'
 
 /* ──────────────────────────────────────────
    Mock-data (estático) até Supabase ficar pronto
    ────────────────────────────────────────── */
+
 const mockCategorias: Categoria[] = [
   { id: 1, nome: 'Unhas em Gel',        slug: 'unhas-em-gel',        descricao: 'Alongamento e blindagem em gel',    imagem_url: null, ordem: 1, ativo: true },
   { id: 2, nome: 'Esmaltação',          slug: 'esmaltacao',          descricao: 'Esmaltação tradicional e em gel',   imagem_url: null, ordem: 2, ativo: true },
@@ -38,146 +36,75 @@ const mockProdutos: Produto[] = [
 ]
 
 /* ──────────────────────────────────────────
-   Utilitário de preço para o toast
+   Props — params é Promise no Next.js 16
    ────────────────────────────────────────── */
-function formatPrice(value: number): string {
-  return value.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  })
+
+interface CategoriaPageProps {
+  params: Promise<{ slug: string }>
 }
 
-export default function Home() {
-  const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null)
+/* ──────────────────────────────────────────
+   Server Component
+   ────────────────────────────────────────── */
 
-  /* Filtra destaques + produtos por categoria */
-  const destaques = useMemo(
-    () => mockProdutos.filter((p) => p.ativo && p.destaque),
-    [],
+export default async function CategoriaPage({ params }: CategoriaPageProps) {
+  const { slug } = await params
+
+  const categoria = mockCategorias.find(
+    (cat) => cat.slug === slug && cat.ativo,
   )
 
-  const produtosPorCategoria = useMemo(() => {
-    const map = new Map<number, Produto[]>()
-    for (const p of mockProdutos) {
-      if (!p.ativo) continue
-      const arr = map.get(p.categoria_id) ?? []
-      arr.push(p)
-      map.set(p.categoria_id, arr)
-    }
-    return map
-  }, [])
-
-  const handleAddWithToast = (produto: Produto) => {
-    const preco =
-      produto.promocao && produto.preco_promocional
-        ? produto.preco_promocional
-        : produto.preco
-    toast.success(`${produto.nome} adicionado ao carrinho`, {
-      description: `${formatPrice(preco)} — 1 un.`,
-      duration: 3000,
-    })
+  if (!categoria) {
+    notFound()
   }
 
-  return (
-    <div className="flex min-h-screen flex-col bg-[#1A1612] text-[#F8F1E9]">
-      {/* Toaster global */}
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: '#2E2820',
-            color: '#F8F1E9',
-            border: '1px solid rgba(201, 169, 110, 0.25)',
-          },
-        }}
-      />
+  const produtos = mockProdutos.filter(
+    (prod) => prod.categoria_id === categoria.id && prod.ativo,
+  )
 
-      {/* Header fixo no topo */}
+  return (
+    <>
       <Header />
 
-      {/* Layout principal: Sidebar | Conteúdo | CartPanel */}
-      <div className="flex flex-1 pt-16">
-        {/* Sidebar (esquerda) — fixa em desktop */}
-        <aside className="hidden lg:block">
-          <Sidebar
-            categorias={mockCategorias}
-            categoriaAtiva={categoriaAtiva}
-          />
-        </aside>
+      <StoreLayout categorias={mockCategorias}>
+        <div className="px-4 py-8 sm:px-6 lg:px-10">
+          {/* ── Breadcrumb ── */}
+          <nav
+            className="mb-6 text-sm text-white/50"
+            aria-label="Breadcrumb"
+          >
+            <Link
+              href="/"
+              className="transition-colors hover:text-[#C9A96E]"
+            >
+              Home
+            </Link>
+            <span className="mx-2">&gt;</span>
+            <span className="text-white/80">{categoria.nome}</span>
+          </nav>
 
-        {/* Conteúdo central (scrollável) */}
-        <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-6 lg:px-10">
-          {/* ── Banner / Hero ── */}
-          <section className="relative mb-12 overflow-hidden rounded-2xl border border-[#C9A96E]/15 bg-gradient-to-br from-[#2E2820] via-[#3A3228] to-[#2E2820] p-8 sm:p-12">
-            <div className="relative z-10 max-w-xl">
-              <h2 className="mb-3 font-serif text-3xl font-bold text-[#C9A96E] sm:text-4xl">
-                Beleza que começa nas pontas dos dedos 💅
-              </h2>
-              <p className="mb-6 text-lg text-[#E8D5B0]/80">
-                Produtos premium para unhas impecáveis. Explore nossa linha
-                exclusiva de esmaltes, alongamentos e cuidados.
-              </p>
-              <a
-                href="#destaques"
-                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#B8860B] to-[#DAA520] px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:brightness-110 active:scale-[0.98]"
-              >
-                Ver Destaques
-              </a>
-            </div>
-            {/* Decoração sutil */}
-            <div className="absolute -bottom-8 -right-8 text-[120px] opacity-[0.06] select-none">
-              💅
-            </div>
-          </section>
+          {/* ── Título da Categoria (Cormorant Garamond) ── */}
+          <h1
+            className="mb-8 font-serif text-3xl font-bold text-[#C9A96E] sm:text-4xl"
+            style={{ fontFamily: "'Cormorant Garamond', serif" }}
+          >
+            {categoria.nome}
+          </h1>
 
-          {/* ── Produtos em Destaque ── */}
-          <section id="destaques" className="mb-14">
-            <h2 className="mb-6 font-serif text-2xl font-semibold text-[#C9A96E]">
-              ✨ Produtos em Destaque
-            </h2>
+          {/* ── Grid Responsivo de ProductCards ── */}
+          {produtos.length > 0 ? (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {destaques.map((produto) => (
-                <div key={produto.id} onClick={() => handleAddWithToast(produto)}>
-                  <ProductCard produto={produto} />
-                </div>
+              {produtos.map((produto) => (
+                <ProductCard key={produto.id} produto={produto} />
               ))}
             </div>
-          </section>
-
-          {/* ── Categorias como seções ── */}
-          {mockCategorias
-            .filter((cat) => cat.ativo && produtosPorCategoria.has(cat.id))
-            .map((categoria) => {
-              const produtos = produtosPorCategoria.get(categoria.id)!
-              return (
-                <section key={categoria.id} className="mb-14">
-                  <div className="mb-2 flex items-baseline justify-between">
-                    <h2 className="font-serif text-xl font-semibold text-[#C9A96E]">
-                      {categoria.nome}
-                    </h2>
-                    {categoria.descricao && (
-                      <span className="hidden text-sm text-[#E8D5B0]/50 sm:block">
-                        {categoria.descricao}
-                      </span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {produtos.map((produto) => (
-                      <div key={produto.id} onClick={() => handleAddWithToast(produto)}>
-                        <ProductCard produto={produto} />
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )
-            })}
-        </main>
-
-        {/* CartPanel (direita) — fixo */}
-        <aside className="hidden xl:block">
-          <CartPanel />
-        </aside>
-      </div>
-    </div>
+          ) : (
+            <p className="py-16 text-center text-white/50">
+              Nenhum produto encontrado nesta categoria.
+            </p>
+          )}
+        </div>
+      </StoreLayout>
+    </>
   )
 }

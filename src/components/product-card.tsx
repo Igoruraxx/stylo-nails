@@ -1,0 +1,106 @@
+'use client'
+
+import { Plus } from 'lucide-react'
+import { useCart } from '@/lib/cart-context'
+import type { Produto } from '@/types'
+
+/**
+ * Formata valor numérico como moeda BRL (R$).
+ */
+function formatPrice(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value)
+}
+
+/**
+ * Mapa de gradientes por categoria (categoria_id → classes Tailwind).
+ * Cada categoria de salão de unhas recebe uma combinação distinta.
+ */
+const categoryGradients: Record<number, string> = {
+  1: 'from-pink-500 to-purple-600',    // Esmaltação
+  2: 'from-cyan-500 to-blue-600',      // Gel
+  3: 'from-violet-500 to-purple-800',  // Acrílico
+  4: 'from-teal-400 to-emerald-600',   // Fibra de Vidro
+  5: 'from-rose-400 to-orange-500',    // Decoração
+  6: 'from-fuchsia-500 to-pink-600',   // Manicure
+  7: 'from-sky-400 to-indigo-600',     // Pedicure
+  8: 'from-amber-500 to-red-600',      // Alongamento
+  9: 'from-green-400 to-teal-600',     // Tratamento
+  10: 'from-rose-500 to-pink-700',     // Maquiagem
+}
+
+function getGradient(categoriaId: number): string {
+  return categoryGradients[categoriaId] ?? 'from-[#C9A96E] to-[#B8860B]'
+}
+
+/* ───────── Props ───────── */
+
+interface ProductCardProps {
+  produto: Produto
+}
+
+/* ───────── Component ───────── */
+
+export default function ProductCard({ produto }: ProductCardProps) {
+  const { adicionar } = useCart()
+
+  const precoAtual =
+    produto.promocao && produto.preco_promocional
+      ? produto.preco_promocional
+      : produto.preco
+
+  return (
+    <div className="group relative flex flex-col overflow-hidden rounded-xl bg-[#2E2820] transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-black/30">
+      {/* ── Image placeholder (gradient based on category) ── */}
+      <div
+        className={`relative flex h-44 items-center justify-center bg-gradient-to-br ${getGradient(produto.categoria_id)}`}
+      >
+        {/* Badge de promoção */}
+        {produto.promocao && (
+          <span className="absolute left-3 top-3 z-10 rounded-full bg-red-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+            🔥 OFERTA
+          </span>
+        )}
+
+        {/* Ícone decorativo placeholder */}
+        <span className="select-none text-5xl opacity-30">💅</span>
+      </div>
+
+      {/* ── Card body ── */}
+      <div className="flex flex-1 flex-col gap-2 p-4">
+        {/* Nome (Jost medium) */}
+        <h3 className="truncate font-medium text-[#F8F1E9]">{produto.nome}</h3>
+
+        {/* Descrição curta */}
+        {produto.descricao && (
+          <p className="line-clamp-2 text-sm leading-relaxed text-white/60">
+            {produto.descricao}
+          </p>
+        )}
+
+        {/* Preços */}
+        <div className="mt-auto flex items-baseline gap-2">
+          <span className="text-lg font-bold text-[#C9A96E]">
+            {formatPrice(precoAtual)}
+          </span>
+          {produto.promocao && produto.preco_promocional != null && (
+            <span className="text-sm text-white/40 line-through">
+              {formatPrice(produto.preco)}
+            </span>
+          )}
+        </div>
+
+        {/* Botão Adicionar */}
+        <button
+          onClick={() => adicionar(produto)}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-[#C9A96E] px-4 py-2.5 text-sm font-semibold text-[#1A1612] transition-all hover:bg-[#DAA520] active:scale-[0.97]"
+        >
+          <Plus size={18} aria-hidden="true" />
+          Adicionar
+        </button>
+      </div>
+    </div>
+  )
+}
