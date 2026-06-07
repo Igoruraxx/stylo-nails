@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Jost, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/lib/cart-context";
+import CartModal from "@/components/cart-modal";
 
 const jost = Jost({
   variable: "--font-jost",
@@ -30,7 +31,10 @@ export default function RootLayout({
       className={`${jost.variable} ${cormorantGaramond.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#1A1612] text-[#F8F1E9] font-sans">
-        <CartProvider>{children}</CartProvider>
+        <CartProvider>
+          {children}
+          <CartModal />
+        </CartProvider>
       </body>
     </html>
   );

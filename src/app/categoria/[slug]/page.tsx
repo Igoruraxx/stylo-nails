@@ -89,7 +89,7 @@ export default function CategoriaPage() {
 
   return (
     <>
-      <Header />
+      <Header onToggleSidebar={() => setSidebarOpen(v => !v)} />
       <StoreLayout categorias={categorias} sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen(v => !v)}>
         <div className="px-4 py-8 sm:px-6 lg:px-10">
           <nav className="mb-6 text-sm text-white/50" aria-label="Breadcrumb">

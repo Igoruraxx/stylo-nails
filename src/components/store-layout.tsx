@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation'
 import Sidebar from '@/components/sidebar'
-import CartPanel from '@/components/cart-panel'
 import type { Categoria } from '@/types'
 
 interface StoreLayoutProps {
@@ -40,15 +39,15 @@ export default function StoreLayout({
             'ft';
         }
 
-        /* ── Desktop: 3‑column with sb / main / rp ── */
+        /* ── Desktop: 2‑column with sb / main ── */
         @media (min-width: 1024px) {
           .store-grid {
-            grid-template-columns: 220px 1fr 272px;
+            grid-template-columns: 220px 1fr;
             grid-template-rows: auto 1fr auto;
             grid-template-areas:
-              'hd  hd  hd'
-              'sb  main rp'
-              'ft  ft  ft';
+              'hd  hd'
+              'sb  main'
+              'ft  ft';
           }
         }
       `}</style>
@@ -105,16 +104,6 @@ export default function StoreLayout({
         >
           {children}
         </main>
-
-        {/* ── Desktop CartPanel ──
-             On mobile the cart is rendered as a bottom sheet managed
-             externally by the parent. ── */}
-        <aside
-          style={{ gridArea: 'rp' }}
-          className="hidden overflow-hidden lg:block"
-        >
-          <CartPanel />
-        </aside>
 
         {/* ── Footer spacer ── */}
         <div style={{ gridArea: 'ft' }} />

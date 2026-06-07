@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useReducer, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useReducer, useEffect, useState, useCallback, ReactNode } from 'react'
 import type { Produto, CartItem } from '@/types'
 
 type CartAction =
@@ -17,6 +17,11 @@ interface CartContextType {
   remover: (produtoId: number) => void
   atualizarQtd: (produtoId: number, quantidade: number) => void
   limpar: () => void
+  /** Modal do carrinho — aberto? */
+  cartOpen: boolean
+  openCart: () => void
+  closeCart: () => void
+  toggleCart: () => void
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -58,9 +63,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return []
   })
 
+  const [cartOpen, setCartOpen] = useState(false)
+
   useEffect(() => {
     localStorage.setItem('stylo-cart', JSON.stringify(itens))
   }, [itens])
+
+  /* ── Travar scroll do body quando modal está aberto ── */
+  useEffect(() => {
+    if (cartOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [cartOpen])
+
+  /* ── ESC fecha o modal ── */
+  useEffect(() => {
+    if (!cartOpen) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCartOpen(false)
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [cartOpen])
+
+  const openCart = useCallback(() => setCartOpen(true), [])
+  const closeCart = useCallback(() => setCartOpen(false), [])
+  const toggleCart = useCallback(() => setCartOpen(v => !v), [])
 
   const total = itens.reduce((acc, i) => {
     const preco = i.produto.promocao && i.produto.preco_promocional
@@ -82,6 +113,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         atualizarQtd: (produtoId, quantidade) =>
           dispatch({ type: 'UPDATE_QTY', produtoId, quantidade }),
         limpar: () => dispatch({ type: 'CLEAR' }),
+        cartOpen,
+        openCart,
+        closeCart,
+        toggleCart,
       }}
     >
       {children}
@@ -91,6 +126,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 export function useCart() {
   const ctx = useContext(CartContext)
-  if (!ctx) throw new Error('useCart必须在CartProvider内使用')
+  if (!ctx) throw new Error('useCart deve ser usado dentro de CartProvider')
   return ctx
 }

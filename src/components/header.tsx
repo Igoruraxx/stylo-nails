@@ -8,14 +8,13 @@ import { useCart } from '@/lib/cart-context'
 
 interface HeaderProps {
   onToggleSidebar?: () => void
-  onToggleCart?: () => void
 }
 
-export default function Header({ onToggleSidebar, onToggleCart }: HeaderProps) {
+export default function Header({ onToggleSidebar }: HeaderProps) {
   const [clickCount, setClickCount] = useState(0)
   const router = useRouter()
   const pathname = usePathname()
-  const { totalItens } = useCart()
+  const { totalItens, toggleCart } = useCart()
 
   /* ── Admin easter egg (5 taps on logo or hidden admin icon) ── */
   const tapAdmin = useCallback(() => {
@@ -26,15 +25,6 @@ export default function Header({ onToggleSidebar, onToggleCart }: HeaderProps) {
       router.push('/admin')
     }
   }, [clickCount, router])
-
-  /* ── Generic cart click: toggle panel or fallback to /cart ── */
-  const handleCartClick = useCallback(() => {
-    if (onToggleCart) {
-      onToggleCart()
-    } else {
-      router.push('/cart')
-    }
-  }, [onToggleCart, router])
 
   const isActive = (path: string) => pathname === path
 
@@ -66,7 +56,7 @@ export default function Header({ onToggleSidebar, onToggleCart }: HeaderProps) {
         {/* Cart icon with badge — always visible in top header */}
         <button
           type="button"
-          onClick={handleCartClick}
+          onClick={toggleCart}
           className="relative flex items-center justify-center w-10 h-10 text-[#E8D5B0] hover:text-[#C9A96E] transition-colors"
           aria-label="Carrinho de compras"
         >
@@ -108,10 +98,10 @@ export default function Header({ onToggleSidebar, onToggleCart }: HeaderProps) {
             <span>Catálogo</span>
           </button>
 
-          {/* 🛒 Carrinho — abre cart panel */}
+          {/* 🛒 Carrinho — abre modal do carrinho */}
           <button
             type="button"
-            onClick={handleCartClick}
+            onClick={toggleCart}
             className="relative flex flex-col items-center justify-center w-14 h-full text-[10px] tracking-wide text-[#E8D5B0]/60 hover:text-[#E8D5B0] transition-colors"
           >
             <span className="text-xl leading-none mb-0.5">🛒</span>

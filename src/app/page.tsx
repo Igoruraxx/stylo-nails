@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react'
 import { Toaster, toast } from 'sonner'
 import Header from '@/components/header'
 import Sidebar from '@/components/sidebar'
-import CartPanel from '@/components/cart-panel'
 import ProductCard from '@/components/product-card'
 import type { Categoria, Produto } from '@/types'
 import { getCategorias, getProdutos } from '@/lib/queries'
@@ -23,7 +22,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [cartOpen, setCartOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -78,7 +76,7 @@ export default function Home() {
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col bg-[#1A1612] text-[#F8F1E9]">
-        <Header onToggleSidebar={() => {}} onToggleCart={() => {}} />
+        <Header onToggleSidebar={() => {}} />
         <div className="flex flex-1 items-center justify-center pt-14 lg:pt-16">
           <div className="text-center">
             <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#C9A96E] border-t-transparent" />
@@ -92,7 +90,7 @@ export default function Home() {
   if (error) {
     return (
       <div className="flex min-h-screen flex-col bg-[#1A1612] text-[#F8F1E9]">
-        <Header onToggleSidebar={() => {}} onToggleCart={() => {}} />
+        <Header onToggleSidebar={() => {}} />
         <div className="flex flex-1 items-center justify-center pt-14 lg:pt-16">
           <div className="max-w-md text-center">
             <p className="mb-4 text-4xl">😕</p>
@@ -111,7 +109,7 @@ export default function Home() {
   if (!hasData) {
     return (
       <div className="flex min-h-screen flex-col bg-[#1A1612] text-[#F8F1E9]">
-        <Header onToggleSidebar={() => {}} onToggleCart={() => {}} />
+        <Header onToggleSidebar={() => {}} />
         <div className="flex flex-1 items-center justify-center pt-14 lg:pt-16">
           <div className="max-w-md text-center">
             <p className="mb-4 text-4xl">🛍️</p>
@@ -142,7 +140,6 @@ export default function Home() {
 
       <Header
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
-        onToggleCart={() => setCartOpen((v) => !v)}
       />
 
       {/* Scrim do sidebar mobile */}
@@ -242,28 +239,6 @@ export default function Home() {
               )
             })}
         </main>
-
-        {/* CartPanel desktop */}
-        <aside className="hidden xl:block">
-          <CartPanel />
-        </aside>
-      </div>
-
-      {/* CartPanel mobile - bottom sheet */}
-      <div className={`fixed inset-0 z-50 lg:hidden ${cartOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-        {cartOpen && (
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setCartOpen(false)}
-          />
-        )}
-        <div
-          className={`absolute bottom-0 left-0 right-0 transition-transform duration-300 ${
-            cartOpen ? 'translate-y-0' : 'translate-y-full'
-          }`}
-        >
-          <CartPanel isOpen={cartOpen} onClose={() => setCartOpen(false)} />
-        </div>
       </div>
 
       {/* Bottom spacer para nav no mobile */}

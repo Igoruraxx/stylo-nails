@@ -18,19 +18,14 @@ function formatPrice(value: number): string {
    Props
    ────────────────────────────────────────── */
 interface CartPanelProps {
-  /** Controla a visibilidade no mobile (< lg) */
-  isOpen?: boolean
-  /** Callback ao fechar (mobile) */
+  /** Callback ao fechar */
   onClose?: () => void
 }
 
 /* ══════════════════════════════════════════
-   CART PANEL — Mobile-first
-   ══════════════════════════════════════════
-   Mobile (< lg):  Bottom sheet fixo no rodapé
-   Desktop (>= lg): Sidebar fixa à direita (w-96)
+   CART PANEL — Content only (wrapped by CartModal)
    ══════════════════════════════════════════ */
-export default function CartPanel({ isOpen = false, onClose }: CartPanelProps) {
+export default function CartPanel({ onClose }: CartPanelProps) {
   const { itens, total, totalItens, remover, atualizarQtd, limpar } = useCart()
 
   const getPreco = (item: (typeof itens)[number]) => {
@@ -38,12 +33,9 @@ export default function CartPanel({ isOpen = false, onClose }: CartPanelProps) {
     return p.promocao && p.preco_promocional ? p.preco_promocional : p.preco
   }
 
-  /* ────────────────────────────────────────
-     Conteúdo compartilhado (mobile + desktop)
-     ──────────────────────────────────────── */
-  const panelContent = (
+  return (
     <>
-      {/* ── Cabeçalho ────────────────────── */}
+      {/* ── Cabeçalho ── */}
       <div className="flex shrink-0 items-center justify-between border-b border-[#1A1612]/10 px-6 py-5">
         <h2 className="text-lg font-semibold tracking-tight">
           Carrinho
@@ -54,19 +46,16 @@ export default function CartPanel({ isOpen = false, onClose }: CartPanelProps) {
           )}
         </h2>
 
-        {/* Botão X — visível apenas no mobile */}
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A1612]/5 text-[#1A1612]/50 transition hover:bg-[#1A1612]/15 hover:text-[#1A1612] lg:hidden"
-            aria-label="Fechar carrinho"
-          >
-            <X size={18} />
-          </button>
-        )}
+        <button
+          onClick={onClose}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A1612]/5 text-[#1A1612]/50 transition hover:bg-[#1A1612]/15 hover:text-[#1A1612]"
+          aria-label="Fechar carrinho"
+        >
+          <X size={18} />
+        </button>
       </div>
 
-      {/* ── Lista de itens (scrollável) ──── */}
+      {/* ── Lista de itens (scrollável) ── */}
       <div className="flex-1 overflow-y-auto px-6 py-4">
         {itens.length === 0 ? (
           <p className="mt-16 text-center text-sm opacity-50">
@@ -144,7 +133,7 @@ export default function CartPanel({ isOpen = false, onClose }: CartPanelProps) {
         )}
       </div>
 
-      {/* ── Footer (total + ações) ───────── */}
+      {/* ── Footer (total + ações) ── */}
       {itens.length > 0 && (
         <div className="shrink-0 border-t border-[#1A1612]/10 px-6 py-5">
           <div className="space-y-3">
@@ -174,37 +163,6 @@ export default function CartPanel({ isOpen = false, onClose }: CartPanelProps) {
             >
               Limpar Carrinho
             </button>
-          </div>
-        </div>
-      )}
-    </>
-  )
-
-  /* =============================================
-     RENDER
-     ============================================= */
-  return (
-    <>
-      {/* ── DESKTOP (>= lg): Sidebar fixa ── */}
-      <aside className="fixed right-0 top-0 z-50 hidden h-full w-96 flex-col bg-[#F8F1E9]/95 text-[#1A1612] shadow-2xl backdrop-blur-xl lg:flex">
-        {panelContent}
-      </aside>
-
-      {/* ── MOBILE (< lg): Bottom sheet ── */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          {/* Scrim */}
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
-            onClick={onClose}
-          />
-
-          {/* Sheet */}
-          <div className="absolute bottom-0 left-0 right-0 flex max-h-[70vh] w-full flex-col rounded-t-2xl bg-[#F8F1E9]/95 text-[#1A1612] shadow-2xl backdrop-blur-xl animate-slide-up">
-            {/* Handle visual */}
-            <div className="mx-auto mt-2 mb-1 h-1 w-10 shrink-0 rounded-full bg-[#1A1612]/20" />
-
-            {panelContent}
           </div>
         </div>
       )}
