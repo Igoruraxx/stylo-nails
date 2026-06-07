@@ -66,10 +66,9 @@ export default function Header({ categorias = [], logoUrl = '/logo.png' }: Heade
               {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
 
-            {/* Logo */}
+            {/* Logo — click vai pro admin */}
             <Link
-              href="/"
-              onClick={(e) => { e.stopPropagation(); tapAdmin() }}
+              href="/admin"
               className="flex items-center gap-2 select-none group"
             >
               {logoUrl ? (

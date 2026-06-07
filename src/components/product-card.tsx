@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { Plus } from 'lucide-react'
 import { useCart } from '@/lib/cart-context'
 import type { Produto } from '@/types'
@@ -35,42 +35,69 @@ interface ProductCardProps {
 
 export default function ProductCard({ produto }: ProductCardProps) {
   const { adicionar } = useCart()
+  const [imgLoaded, setImgLoaded] = useState(false)
   const [imgError, setImgError] = useState(false)
-  const [added, setAdded] = useState(false)
-  const imgRef = useRef<HTMLImageElement>(null)
-
-  const temFoto = !!produto.imagem_url && !imgError
+  const [flash, setFlash] = useState(false)
+  const [vanishing, setVanishing] = useState(false)
 
   const precoAtual =
     produto.promocao && produto.preco_promocional
       ? produto.preco_promocional
       : produto.preco
 
+  const temFoto = !!produto.imagem_url && !imgError
+
   const handleAdd = useCallback(() => {
-    adicionar(produto)
-    setAdded(true)
-    const t = setTimeout(() => setAdded(false), 1200)
-    return () => clearTimeout(t)
-  }, [adicionar, produto])
+    /* Gold flash no botão */
+    setFlash(true)
+    setTimeout(() => setFlash(false), 500)
+
+    /* Produto "some" rápido */
+    setVanishing(true)
+    setTimeout(() => {
+      adicionar(produto)
+      /* reset visual depois que some */
+      setTimeout(() => setVanishing(false), 600)
+    }, 300)
+  }, [produto, adicionar])
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-xl border border-white/5 bg-[#2E2820]/60 backdrop-blur-lg transition-all duration-300 hover:scale-[1.03] hover:border-[#C9A96E]/30 hover:shadow-xl hover:shadow-[#C9A96E]/10">
-      <div className={`relative flex h-48 items-center justify-center overflow-hidden bg-gradient-to-br ${getGradient(produto.categoria_id)}`}>
-        {temFoto && (
-          <img
-            ref={imgRef}
-            src={produto.imagem_url!}
-            alt={produto.nome}
-            className="absolute inset-0 z-10 h-full w-full object-cover transition-all duration-500 group-hover:scale-110"
-            onError={() => setImgError(true)}
-            loading="lazy"
-          />
+    <div
+      className={`group relative flex flex-col overflow-hidden rounded-xl border border-white/5 bg-[#2E2820]/60 backdrop-blur-lg transition-all duration-300 hover:scale-[1.03] hover:border-[#C9A96E]/30 hover:shadow-xl hover:shadow-[#C9A96E]/10 ${
+        vanishing ? 'animate-product-vanish pointer-events-none' : ''
+      }`}
+    >
+      {/* ── Imagem ── */}
+      <div className="relative flex h-48 items-center justify-center overflow-hidden bg-[#2E2820]">
+        {temFoto ? (
+          <>
+            <img
+              src={produto.imagem_url!}
+              alt={produto.nome}
+              className={`h-full w-full object-cover transition-all duration-500 group-hover:scale-110 ${
+                imgLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+              onLoad={() => setImgLoaded(true)}
+              onError={() => setImgError(true)}
+              loading="lazy"
+            />
+            {!imgLoaded && (
+              <div className={`absolute inset-0 bg-gradient-to-br ${getGradient(produto.categoria_id)}`}>
+                <div className="shimmer pointer-events-none absolute inset-0" />
+                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-3xl opacity-20">💅</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className={`absolute inset-0 bg-gradient-to-br ${getGradient(produto.categoria_id)}`}>
+            <div className="shimmer pointer-events-none absolute inset-0" />
+          </div>
         )}
 
-        <div className="shimmer pointer-events-none absolute inset-0 z-0" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#2E2820] to-transparent" />
 
         {produto.promocao && (
-          <span className="absolute left-3 top-3 z-20 animate-pulse rounded-full bg-red-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+          <span className="absolute left-3 top-3 z-10 animate-pulse rounded-full bg-red-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
             🔥 OFERTA
           </span>
         )}
@@ -80,6 +107,7 @@ export default function ProductCard({ produto }: ProductCardProps) {
         )}
       </div>
 
+      {/* ── Card body ── */}
       <div className="flex flex-1 flex-col gap-3 p-5">
         <h3 className="truncate font-serif text-lg font-semibold leading-tight text-[#F8F1E9]">
           {produto.nome}
@@ -102,19 +130,17 @@ export default function ProductCard({ produto }: ProductCardProps) {
           )}
         </div>
 
+        {/* Botão Adicionar com gold flash */}
         <button
           onClick={handleAdd}
-          className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all active:scale-[0.97] ${
-            added
-              ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
-              : 'bg-[#C9A96E] text-[#1A1612] hover:bg-[#DAA520] hover:shadow-lg hover:shadow-[#C9A96E]/20'
+          className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-[#1A1612] transition-all active:scale-[0.97] ${
+            flash
+              ? 'animate-gold-flash'
+              : 'bg-[#C9A96E] hover:bg-[#DAA520] hover:shadow-lg hover:shadow-[#C9A96E]/20'
           }`}
         >
-          {added ? (
-            <>✓ Adicionado</>
-          ) : (
-            <><Plus size={18} aria-hidden="true" /> Adicionar</>
-          )}
+          <Plus size={18} aria-hidden="true" />
+          Adicionar
         </button>
       </div>
     </div>
