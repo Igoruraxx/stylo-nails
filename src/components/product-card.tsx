@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Plus } from 'lucide-react'
 import { useCart } from '@/lib/cart-context'
 import type { Produto } from '@/types'
@@ -36,6 +36,7 @@ interface ProductCardProps {
 export default function ProductCard({ produto }: ProductCardProps) {
   const { adicionar } = useCart()
   const [imgError, setImgError] = useState(false)
+  const [added, setAdded] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
 
   const temFoto = !!produto.imagem_url && !imgError
@@ -44,6 +45,13 @@ export default function ProductCard({ produto }: ProductCardProps) {
     produto.promocao && produto.preco_promocional
       ? produto.preco_promocional
       : produto.preco
+
+  const handleAdd = useCallback(() => {
+    adicionar(produto)
+    setAdded(true)
+    const t = setTimeout(() => setAdded(false), 1200)
+    return () => clearTimeout(t)
+  }, [adicionar, produto])
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-xl border border-white/5 bg-[#2E2820]/60 backdrop-blur-lg transition-all duration-300 hover:scale-[1.03] hover:border-[#C9A96E]/30 hover:shadow-xl hover:shadow-[#C9A96E]/10">
@@ -95,11 +103,18 @@ export default function ProductCard({ produto }: ProductCardProps) {
         </div>
 
         <button
-          onClick={() => adicionar(produto)}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-[#C9A96E] px-4 py-2.5 text-sm font-semibold text-[#1A1612] transition-all hover:bg-[#DAA520] hover:shadow-lg hover:shadow-[#C9A96E]/20 active:scale-[0.97]"
+          onClick={handleAdd}
+          className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all active:scale-[0.97] ${
+            added
+              ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
+              : 'bg-[#C9A96E] text-[#1A1612] hover:bg-[#DAA520] hover:shadow-lg hover:shadow-[#C9A96E]/20'
+          }`}
         >
-          <Plus size={18} aria-hidden="true" />
-          Adicionar
+          {added ? (
+            <>✓ Adicionado</>
+          ) : (
+            <><Plus size={18} aria-hidden="true" /> Adicionar</>
+          )}
         </button>
       </div>
     </div>

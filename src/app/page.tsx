@@ -6,6 +6,7 @@ import Header from '@/components/header'
 import Sidebar from '@/components/sidebar'
 import ProductCard from '@/components/product-card'
 import type { Categoria, Produto } from '@/types'
+import { getCategorias, getProdutos import { CategoriaIconView } from '@/components/categoria-icon'
 import { getCategorias, getProdutos } from '@/lib/queries'
 
 function formatPrice(value: number): string {

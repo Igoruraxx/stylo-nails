@@ -98,118 +98,190 @@ body {
 
 /* ── Fade In ───────────────────────────────────────────────── */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* ── Slide Up ──────────────────────────────────────────────── */
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ── Shimmer (Animated Loading Gradient) ───────────────────── */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-/* ── Float ─────────────────────────────────────────────────── */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-/* ── Shimmer Utility (for skeleton loading states) ─────────── */
-.shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(201, 169, 110, 0.05) 0%,
-    rgba(201, 169, 110, 0.2) 40%,
-    rgba(201, 169, 110, 0.05) 80%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.8s ease-in-out infinite;
-}
-
-/* ── Animation Utility Classes ─────────────────────────────── */
-.animate-fade-in {
-  animation: fadeIn 0.6s ease-out forwards;
-}
-
-.animate-slide-up {
-  animation: slideUp 0.6s ease-out forwards;
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
-
-/* ── Cart Rise (Dynamic Modal Entrance) ────────────────────── */
-@keyframes cartRise {
-  0% {
-    opacity: 0;
-    transform: translateY(50px) scale(0.92);
-  }
-  35% {
-    opacity: 1;
-    transform: translateY(-10px) scale(1.02);
-  }
-  60% {
-    transform: translateY(4px) scale(0.99);
-  }
-  85% {
-    transform: translateY(-2px) scale(1);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* ── Backdrop Fade ─────────────────────────────────────────── */
-@keyframes backdropFade {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-/* ── Cart Exit (reverse animation via transition) ──────────── */
-.cart-modal-exit {
-  opacity: 0 !important;
-  transform: translateY(30px) scale(0.94) !important;
-  transition: opacity 0.2s ease-in, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+/* ── Slide Up ──────────────────────────────────────────────── */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.cart-backdrop-exit {
-  opacity: 0 !important;
-  transition: opacity 0.25s ease-out !important;
+/* ── Shimmer ───────────────────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
+
+.shimmer {
+  background: linear-gradient(90deg, rgba(201,169,110,0.05) 0%, rgba(201,169,110,0.2) 40%, rgba(201,169,110,0.05) 80%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* ── Float ─────────────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-float { animation: float 3s ease-in-out infinite; }
+
+/* ── Pulse Glow (gold) ─────────────────────────────────────── */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(201, 169, 110, 0.2); }
+  50% { box-shadow: 0 0 40px rgba(201, 169, 110, 0.5); }
+}
+
+/* ── Scale Press (micro-interação) ─────────────────────────── */
+@keyframes scalePress {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+.animate-scale-press:active { animation: scalePress 0.15s ease; }
+
+/* ── Badge Bounce (quando o carrinho muda) ─────────────────── */
+@keyframes badgeBounce {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.35); }
+  60% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+.animate-badge-bounce { animation: badgeBounce 0.4s cubic-bezier(0.68,-0.55,0.265,1.55); }
+
+/* ── Cart Slide In (da direita, estilo Stripe/Linear) ──────── */
+@keyframes cartSlideIn {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(0); }
+}
+@keyframes cartSlideOut {
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+/* ── Item Enter (staggered) ────────────────────────────────── */
+@keyframes itemEnter {
+  0% { opacity: 0; transform: translateX(-20px) scale(0.95); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+/* ── Item Exit (remove) ────────────────────────────────────── */
+@keyframes itemExit {
+  0% { opacity: 1; transform: scale(1); max-height: 100px; margin-bottom: 12px; }
+  100% { opacity: 0; transform: scale(0.8); max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; }
+}
+
+/* ── Gold Shimmer Text (total animado) ─────────────────────── */
+@keyframes goldShimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.animate-gold-shimmer {
+  background: linear-gradient(90deg, #C9A96E 0%, #E8D5B0 30%, #F8F1E9 50%, #E8D5B0 70%, #C9A96E 100%);
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: goldShimmer 3s ease-in-out infinite;
+}
+
+/* ── Checkout Price Pop (total em preto com animação) ──────── */
+@keyframes pricePop {
+  0%, 100% {
+    transform: scale(1);
+    text-shadow: 0 0 0 transparent;
+  }
+  30% {
+    transform: scale(1.08);
+    text-shadow: 0 0 20px rgba(201, 169, 110, 0.4);
+  }
+  60% {
+    transform: scale(0.97);
+  }
+  80% {
+    transform: scale(1.02);
+  }
+}
+.animate-price-pop {
+  animation: pricePop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ── Pulse infinito suave para o botão ativo ───────────────── */
+@keyframes btnActivePulse {
+  0%, 100% {
+    box-shadow: 0 4px 15px rgba(184, 134, 11, 0.3), 0 0 0 0 rgba(184, 134, 11, 0.2);
+  }
+  50% {
+    box-shadow: 0 4px 25px rgba(184, 134, 11, 0.5), 0 0 0 8px rgba(184, 134, 11, 0);
+  }
+}
+.animate-btn-pulse {
+  animation: btnActivePulse 2s ease-in-out infinite;
+}
+
+/* ── Empty State Float ─────────────────────────────────────── */
+@keyframes emptyFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-8px) rotate(-3deg); }
+  75% { transform: translateY(-4px) rotate(3deg); }
+}
+
+/* ── Cart Panel Custom Scrollbar ───────────────────────────── */
+.cart-scroll::-webkit-scrollbar { width: 4px; }
+.cart-scroll::-webkit-scrollbar-track { background: transparent; }
+.cart-scroll::-webkit-scrollbar-thumb { background: rgba(201,169,110,0.3); border-radius: 2px; }
+.cart-scroll::-webkit-scrollbar-thumb:hover { background: rgba(201,169,110,0.5); }
 
 /* ── Utility Classes ───────────────────────────────────────── */
-.animate-cart-rise {
-  animation: cartRise 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
+.animate-slide-up { animation: slideUp 0.6s ease-out forwards; }
+
+/* ── Cart Classes ──────────────────────────────────────────── */
+.cart-enter { animation: cartSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.cart-exit { animation: cartSlideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+.cart-item-enter { animation: itemEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.cart-item-exit {
+  animation: itemExit 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  overflow: hidden;
 }
 
-.animate-backdrop-fade {
-  animation: backdropFade 0.3s ease-out forwards;
+.cart-backdrop-enter { animation: fadeIn 0.25s ease-out forwards; }
+.cart-backdrop-exit { animation: fadeIn 0.2s ease-in reverse forwards; }
+
+/* ── Botão Quantidade ──────────────────────────────────────── */
+.qty-btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.15s ease;
+}
+.qty-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(201,169,110,0.3) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.qty-btn:hover::after { opacity: 1; }
+.qty-btn:active { transform: scale(0.9); }
+
+/* ── Empty State ───────────────────────────────────────────── */
+.animate-empty-float {
+  animation: emptyFloat 4s ease-in-out infinite;
+}
+
+/* ── Shimmer Skeleton ──────────────────────────────────────── */
+@keyframes shimmerSkeleton {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, rgba(201,169,110,0.08) 0%, rgba(201,169,110,0.2) 50%, rgba(201,169,110,0.08) 100%);
+  background-size: 200% 100%;
+  animation: shimmerSkeleton 1.5s ease-in-out infinite;
+  border-radius: 6px;
 }
 
 /* ═══════════════════════════════════════════════════════════════
