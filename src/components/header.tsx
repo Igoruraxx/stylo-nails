@@ -15,7 +15,7 @@ interface HeaderProps {
   logoUrl?: string
 }
 
-export default function Header({ categorias = [], logoUrl }: HeaderProps) {
+export default function Header({ categorias = [], logoUrl = '/logo.png' }: HeaderProps) {
   const [clickCount, setClickCount] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -257,6 +257,17 @@ export default function Header({ categorias = [], logoUrl }: HeaderProps) {
               })}
             </ul>
           </nav>
+
+          {/* ── Admin escondidinho no rodapé do drawer ── */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/5">
+            <button
+              onClick={() => { setSidebarOpen(false); router.push('/admin') }}
+              className="w-full text-center text-[10px] text-white/10 hover:text-[#C9A96E]/40 transition-colors tracking-widest uppercase"
+              aria-label="Admin"
+            >
+              • • •
+            </button>
+          </div>
         </aside>
       </div>
 

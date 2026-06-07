@@ -62,7 +62,7 @@ export default function CategoriaPage() {
   if (loading) {
     return (
       <>
-        <Header />
+        <Header logoUrl="/logo-gold.png" />
         <div className="flex h-screen items-center justify-center">
           <div className="animate-pulse text-[#C9A96E]">Carregando...</div>
         </div>
@@ -73,7 +73,7 @@ export default function CategoriaPage() {
   if (notFound || !categoria) {
     return (
       <>
-        <Header categorias={categorias} />
+        <Header categorias={categorias} logoUrl="/logo-gold.png" />
         <div className="flex h-screen flex-col items-center justify-center gap-4">
           <span className="text-6xl">💅</span>
           <h1 className="font-serif text-2xl text-[#C9A96E]">Página não encontrada</h1>
@@ -87,7 +87,7 @@ export default function CategoriaPage() {
 
   return (
     <>
-      <Header categorias={categorias} />
+      <Header categorias={categorias} logoUrl="/logo-gold.png" />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
         <nav className="mb-6 text-sm text-white/50" aria-label="Breadcrumb">

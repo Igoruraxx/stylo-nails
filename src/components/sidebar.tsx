@@ -15,7 +15,7 @@ export default function Sidebar({ categorias, categoriaAtiva }: SidebarProps) {
       {/* Logo */}
       <div className="px-6 py-6 border-b border-white/10">
         <Link href="/" className="flex items-center gap-3">
-          <span className="text-2xl">💅</span>
+          <img src="/logo-gold.png" alt="Stylo Nails" className="h-10 w-10 object-contain" />
           <span className="text-xl font-semibold text-[#C9A96E] tracking-wider uppercase">
             Stylo Nails
           </span>

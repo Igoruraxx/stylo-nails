@@ -74,7 +74,7 @@ export default function Home() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#1A1612] text-[#F8F1E9]">
-        <Header />
+        <Header logoUrl="/logo-gold.png" />
         <div className="flex items-center justify-center pt-32">
           <div className="text-center">
             <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#C9A96E] border-t-transparent" />
@@ -88,7 +88,7 @@ export default function Home() {
   if (error) {
     return (
       <div className="min-h-screen bg-[#1A1612] text-[#F8F1E9]">
-        <Header categorias={categorias} />
+        <Header categorias={categorias} logoUrl="/logo-gold.png" />
         <div className="flex items-center justify-center pt-32">
           <div className="max-w-md text-center">
             <p className="mb-4 text-4xl">😕</p>
@@ -107,7 +107,7 @@ export default function Home() {
   if (!hasData) {
     return (
       <div className="min-h-screen bg-[#1A1612] text-[#F8F1E9]">
-        <Header categorias={categorias} />
+        <Header categorias={categorias} logoUrl="/logo-gold.png" />
         <div className="flex items-center justify-center pt-32">
           <div className="max-w-md text-center">
             <p className="mb-4 text-4xl">🛍️</p>
@@ -136,11 +136,27 @@ export default function Home() {
         }}
       />
 
-      <Header categorias={categorias} />
+      <Header categorias={categorias} logoUrl="/logo-gold.png" />
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {/* Hero */}
-        <section className="animate-fade-in relative mb-10 overflow-hidden rounded-2xl border border-[#C9A96E]/15 bg-gradient-to-br from-[#2E2820] via-[#3A3228] to-[#2E2820] p-6 sm:p-10 lg:p-12">
+        {/* Hero com vídeo de fundo */}
+        <section className="animate-fade-in relative mb-10 overflow-hidden rounded-2xl border border-[#C9A96E]/15 p-6 sm:p-10 lg:p-12 min-h-[320px] sm:min-h-[400px] flex items-center">
+          {/* Vídeo de fundo */}
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 h-full w-full object-cover"
+            poster="/logo-gold.png"
+          >
+            <source src="/hero-bg.mp4" type="video/mp4" />
+          </video>
+
+          {/* Overlay escuro */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#1A1612]/85 via-[#1A1612]/70 to-[#1A1612]/85" />
+
+          {/* Conteúdo */}
           <div className="relative z-10 max-w-xl">
             <h2 className="mb-3 font-serif text-2xl font-bold text-[#C9A96E] sm:text-3xl lg:text-4xl">
               Beleza que começa nas pontas dos dedos 💅
@@ -155,9 +171,6 @@ export default function Home() {
             >
               Ver Destaques
             </a>
-          </div>
-          <div className="absolute -bottom-8 -right-8 select-none text-[100px] opacity-[0.06] sm:text-[120px]">
-            💅
           </div>
         </section>
 

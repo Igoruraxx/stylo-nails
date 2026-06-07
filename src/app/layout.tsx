@@ -18,6 +18,10 @@ const cormorantGaramond = Cormorant_Garamond({
 export const metadata: Metadata = {
   title: "Stylo Nails - Esmalteria Premium",
   description: "Esmalteria premium com serviços de unhas e produtos exclusivos.",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo-gold.png",
+  },
 };
 
 export default function RootLayout({

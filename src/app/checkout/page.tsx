@@ -7,6 +7,9 @@ import { toast, Toaster } from 'sonner'
 import { useCart } from '@/lib/cart-context'
 import type { CartItem } from '@/types'
 
+/* ── Número da loja no WhatsApp (com DDI 55) ── */
+const STORE_WHATSAPP = '5511999999999' // ← TROCAR PELO NÚMERO REAL DA LOJA
+
 /* ──────────────────────────────────────────
    Utilitários
    ────────────────────────────────────────── */
@@ -21,10 +24,6 @@ function formatPrice(value: number): string {
 function getPreco(item: CartItem): number {
   const p = item.produto
   return p.promocao && p.preco_promocional ? p.preco_promocional : p.preco
-}
-
-function sanitizeWhatsApp(value: string): string {
-  return value.replace(/\D/g, '')
 }
 
 /* ──────────────────────────────────────────
@@ -44,7 +43,6 @@ export default function CheckoutPage() {
   const { itens, total, limpar } = useCart()
 
   const [nome, setNome] = useState('')
-  const [whatsapp, setWhatsapp] = useState('')
   const [endereco, setEndereco] = useState('')
   const [observacao, setObservacao] = useState('')
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento | null>(null)
@@ -64,22 +62,16 @@ export default function CheckoutPage() {
     }
   }, [carregando, itens.length, router])
 
-  /* ── Validação: todos os campos obrigatórios preenchidos ── */
-  const podeEnviar =
-    nome.trim().length > 0 &&
-    endereco.trim().length > 0 &&
-    formaPagamento !== null
+  /* ── Validação: libera com nome + endereço apenas ── */
+  const podeEnviar = nome.trim().length > 0 && endereco.trim().length > 0
 
   /* ── Monta mensagem do WhatsApp ── */
   const buildWhatsAppMessage = useCallback(() => {
-    if (!formaPagamento) return ''
-
     const linhasItens = itens
       .map((item, i) => {
         const preco = getPreco(item)
         const subtotal = preco * item.quantidade
-        const nomeProduto = item.produto.nome
-        return `${i + 1}. *${nomeProduto}* — ${item.quantidade}x ${formatPrice(subtotal)}`
+        return `${i + 1}. *${item.produto.nome}* — ${item.quantidade}x ${formatPrice(subtotal)}`
       })
       .join('\n')
 
@@ -100,7 +92,7 @@ export default function CheckoutPage() {
       '━━━━━━━━━━━━━━━━━━',
       '',
       `💵 *Total:* ${formatPrice(total)}`,
-      `💳 *Pagamento:* ${formaPagamento}`,
+      formaPagamento ? `💳 *Pagamento:* ${formaPagamento}` : '',
       observacao.trim() ? `📝 *Observação:* ${observacao.trim()}` : '',
     ]
       .filter(Boolean)
@@ -119,18 +111,17 @@ export default function CheckoutPage() {
     e.preventDefault()
 
     if (!podeEnviar) {
-      toast.error('Preencha todos os campos obrigatórios')
+      toast.error('Preencha seu nome e endereço de entrega')
       return
     }
 
     setEnviando(true)
 
-    const whatsappLimpo = sanitizeWhatsApp(whatsapp || nome)
     const mensagem = buildWhatsAppMessage()
-    const link = `https://wa.me/55${whatsappLimpo}?text=${mensagem}`
+    const link = `https://wa.me/${STORE_WHATSAPP}?text=${mensagem}`
 
     toast.success('Pedido gerado com sucesso!', {
-      description: 'Você será redirecionado para o WhatsApp.',
+      description: 'Abrindo WhatsApp para enviar seu pedido...',
       duration: 4000,
     })
 
@@ -159,9 +150,9 @@ export default function CheckoutPage() {
         <div className="mx-auto flex max-w-4xl items-center justify-between">
           <Link
             href="/"
-            className="font-serif text-xl font-semibold tracking-wide text-[#C9A96E]"
+            className="flex items-center gap-2"
           >
-            Stylo Nails
+            <img src="/logo.png" alt="Stylo Nails" className="h-8 w-auto object-contain" />
           </Link>
           <Link
             href="/"
@@ -189,7 +180,7 @@ export default function CheckoutPage() {
             {/* ── Dados do Cliente ── */}
             <section className="rounded-xl border border-[#C9A96E]/15 bg-[#2E2820]/60 p-6 backdrop-blur-sm">
               <h2 className="mb-6 font-serif text-lg font-semibold text-[#C9A96E]">
-                Dados do Cliente
+                Dados para Entrega
               </h2>
 
               <div className="space-y-5">
@@ -210,26 +201,6 @@ export default function CheckoutPage() {
                     placeholder="Seu nome completo"
                     className="w-full rounded-lg border border-[#C9A96E]/20 bg-[#1A1612] px-4 py-3 text-sm text-[#F8F1E9] placeholder-[#E8D5B0]/30 outline-none transition focus:border-[#B8860B] focus:ring-1 focus:ring-[#B8860B]/40"
                     required
-                  />
-                </div>
-
-                {/* WhatsApp */}
-                <div>
-                  <label
-                    htmlFor="whatsapp"
-                    className="mb-1.5 flex items-center gap-1 text-sm font-medium text-[#E8D5B0]/80"
-                  >
-                    WhatsApp <span className="text-xs opacity-50">(apenas números)</span>
-                  </label>
-                  <input
-                    id="whatsapp"
-                    type="tel"
-                    inputMode="numeric"
-                    value={whatsapp}
-                    onChange={(e) => setWhatsapp(sanitizeWhatsApp(e.target.value))}
-                    placeholder="11999999999"
-                    maxLength={11}
-                    className="w-full rounded-lg border border-[#C9A96E]/20 bg-[#1A1612] px-4 py-3 text-sm text-[#F8F1E9] placeholder-[#E8D5B0]/30 outline-none transition focus:border-[#B8860B] focus:ring-1 focus:ring-[#B8860B]/40"
                   />
                 </div>
 
@@ -275,9 +246,9 @@ export default function CheckoutPage() {
 
             {/* ── Forma de Pagamento ── */}
             <section className="rounded-xl border border-[#C9A96E]/15 bg-[#2E2820]/60 p-6 backdrop-blur-sm">
-              <h2 className="mb-6 flex items-center gap-1 font-serif text-lg font-semibold text-[#C9A96E]">
+              <h2 className="mb-6 font-serif text-lg font-semibold text-[#C9A96E]">
                 Forma de Pagamento
-                <span className="text-red-400 text-base">*</span>
+                <span className="ml-1 text-xs font-normal text-white/40">(opcional)</span>
               </h2>
 
               <div className="flex flex-wrap gap-3">
@@ -287,7 +258,7 @@ export default function CheckoutPage() {
                     <button
                       key={forma}
                       type="button"
-                      onClick={() => setFormaPagamento(forma)}
+                      onClick={() => setFormaPagamento(forma === formaPagamento ? null : forma)}
                       className={`rounded-lg border px-6 py-3 text-sm font-medium transition-all active:scale-[0.97] ${
                         isActive
                           ? 'border-[#B8860B] bg-gradient-to-r from-[#B8860B] to-[#DAA520] text-white shadow-lg shadow-[#B8860B]/20'
@@ -316,7 +287,7 @@ export default function CheckoutPage() {
 
               {/* ── Lista de itens ── */}
               <div className="space-y-4">
-                {itens.map((item, idx) => {
+                {itens.map((item) => {
                   const preco = getPreco(item)
                   const subtotal = preco * item.quantidade
                   const isPromocao =
@@ -360,9 +331,7 @@ export default function CheckoutPage() {
 
               {/* ── TOTAL: preto com animação chamativa ── */}
               <div className="relative mt-6 overflow-hidden rounded-xl border border-[#C9A96E]/20 bg-gradient-to-br from-[#F8F1E9] to-[#E8D5B0] px-5 py-4 shadow-lg">
-                {/* Brilho animado que percorre o fundo */}
                 <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.6)_50%,transparent_100%)] bg-[length:200%_100%] animate-gold-shimmer" />
-
                 <div className="relative z-10 flex items-center justify-between">
                   <span className="text-sm font-semibold text-[#1A1612]/70">
                     Total
@@ -373,44 +342,32 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* ── Botão Finalizar Pedido ── */}
+              {/* ── Botão Confirmar Pedido com WhatsApp ── */}
               <button
                 type="submit"
                 disabled={!podeEnviar || enviando}
                 onClick={handleSubmit}
-                className={`mt-5 flex w-full items-center justify-center gap-2 rounded-lg px-6 py-4 text-base font-semibold shadow-lg transition-all active:scale-[0.98] ${
+                className={`mt-5 flex w-full items-center justify-center gap-3 rounded-lg px-6 py-4 text-base font-semibold shadow-lg transition-all active:scale-[0.98] ${
                   !podeEnviar || enviando
                     ? 'cursor-not-allowed bg-[#2E2820] text-[#E8D5B0]/30 shadow-none'
-                    : 'bg-gradient-to-r from-[#B8860B] to-[#DAA520] text-white hover:brightness-110 animate-btn-pulse'
+                    : 'bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white hover:brightness-110 animate-btn-pulse'
                 }`}
               >
                 {enviando ? (
                   <>
-                    <svg
-                      className="h-5 w-5 animate-spin"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      />
+                    <svg className="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    Gerando pedido...
+                    Enviando pedido...
                   </>
                 ) : (
                   <>
-                    🛍️ Finalizar Pedido
+                    {/* Ícone do WhatsApp SVG */}
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                    </svg>
+                    <span>Confirmar Pedido</span>
                   </>
                 )}
               </button>
@@ -418,9 +375,8 @@ export default function CheckoutPage() {
               {/* ── Hint dos campos obrigatórios ── */}
               {!podeEnviar && (
                 <p className="mt-3 text-center text-[11px] text-[#E8D5B0]/40">
-                  {!nome.trim() && '✏️ Preencha seu nome • '}
-                  {!endereco.trim() && '📍 Informe o endereço • '}
-                  {!formaPagamento && '💳 Selecione o pagamento'}
+                  {!nome.trim() && '✏️ Preencha seu nome '}
+                  {!endereco.trim() && '📍 Informe o endereço'}
                 </p>
               )}
             </div>
