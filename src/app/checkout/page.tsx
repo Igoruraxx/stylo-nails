@@ -8,7 +8,7 @@ import { useCart } from '@/lib/cart-context'
 import type { CartItem } from '@/types'
 
 /* ── Número da loja no WhatsApp (com DDI 55) ── */
-const STORE_WHATSAPP = '5511999999999' // ← TROCAR PELO NÚMERO REAL DA LOJA
+const STORE_WHATSAPP = '5562994402492'
 
 /* ──────────────────────────────────────────
    Utilitários
