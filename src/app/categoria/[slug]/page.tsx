@@ -1,47 +1,90 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
 import Header from '@/components/header'
 import StoreLayout from '@/components/store-layout'
 import ProductCard from '@/components/product-card'
 import type { Categoria, Produto } from '@/types'
 
-const API_URL = 'https://blwzprxihmienukhsapw.supabase.co/rest/v1'
-const ANON_KEY = 'sb_publishable_Md8oCk2-vqoTLqFTKmfxHA_pJ1eQhvA'
+export default function CategoriaPage() {
+  const params = useParams()
+  const slug = params.slug as string
 
-async function sbGet<T>(path: string): Promise<T[]> {
-  try {
-    const res = await fetch(`${API_URL}/${path}`, {
-      headers: {
-        apikey: ANON_KEY,
-        Authorization: `Bearer ${ANON_KEY}`,
-      },
-      next: { revalidate: 30 },
-    })
-    if (!res.ok) {
-      console.error(`Supabase fetch error: ${res.status} for ${path}`)
-      return []
+  const [categorias, setCategorias] = useState<Categoria[]>([])
+  const [categoria, setCategoria] = useState<Categoria | null>(null)
+  const [produtos, setProdutos] = useState<Produto[]>([])
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const API = 'https://blwzprxihmienukhsapw.supabase.co/rest/v1'
+        const HEADERS = {
+          apikey: 'sb_publishable_Md8oCk2-vqoTLqFTKmfxHA_pJ1eQhvA',
+          Authorization: 'Bearer sb_publishable_Md8oCk2-vqoTLqFTKmfxHA_pJ1eQhvA',
+        }
+
+        const [catRes, catsRes] = await Promise.all([
+          fetch(`${API}/categorias?select=*&slug=eq.${slug}&ativo=eq.true`, { headers: HEADERS }),
+          fetch(`${API}/categorias?select=*&ativo=eq.true&order=ordem`, { headers: HEADERS }),
+        ])
+
+        const catData: Categoria[] = await catRes.json()
+        const catsData: Categoria[] = await catsRes.json()
+
+        if (!catData.length) {
+          setNotFound(true)
+          setLoading(false)
+          return
+        }
+
+        setCategoria(catData[0])
+        setCategorias(catsData)
+
+        const prodRes = await fetch(
+          `${API}/produtos?select=*&categoria_id=eq.${catData[0].id}&ativo=eq.true&order=ordem`,
+          { headers: HEADERS }
+        )
+        const prodData: Produto[] = await prodRes.json()
+        setProdutos(prodData)
+      } catch (e) {
+        console.error('Erro ao carregar:', e)
+        setNotFound(true)
+      } finally {
+        setLoading(false)
+      }
     }
-    return res.json()
-  } catch (e) {
-    console.error('Supabase fetch failed:', e)
-    return []
+    load()
+  }, [slug])
+
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <div className="flex h-screen items-center justify-center">
+          <div className="animate-pulse text-[#C9A96E]">Carregando...</div>
+        </div>
+      </>
+    )
   }
-}
 
-interface Props {
-  params: Promise<{ slug: string }>
-}
-
-export default async function CategoriaPage({ params }: Props) {
-  const { slug } = await params
-
-  const categorias = await sbGet<Categoria>(`categorias?select=*&ativo=eq.true&order=ordem`)
-  const catList = await sbGet<Categoria>(`categorias?select=*&slug=eq.${slug}&ativo=eq.true`)
-
-  const categoria = catList[0]
-  if (!categoria) notFound()
-
-  const produtos = await sbGet<Produto>(`produtos?select=*&categoria_id=eq.${categoria.id}&ativo=eq.true&order=ordem`)
+  if (notFound || !categoria) {
+    return (
+      <>
+        <Header />
+        <div className="flex h-screen flex-col items-center justify-center gap-4">
+          <span className="text-6xl">💅</span>
+          <h1 className="font-serif text-2xl text-[#C9A96E]">Página não encontrada</h1>
+          <Link href="/" className="text-white/60 hover:text-[#C9A96E] transition-colors">
+            Voltar ao início
+          </Link>
+        </div>
+      </>
+    )
+  }
 
   return (
     <>
@@ -63,9 +106,9 @@ export default async function CategoriaPage({ params }: Props) {
             {categoria.nome}
           </h1>
 
-          {produtos && produtos.length > 0 ? (
+          {produtos.length > 0 ? (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {produtos.map((produto: Produto) => (
+              {produtos.map((produto) => (
                 <ProductCard key={produto.id} produto={produto} />
               ))}
             </div>
