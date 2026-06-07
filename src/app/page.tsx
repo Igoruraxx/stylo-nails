@@ -1,41 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Toaster, toast } from 'sonner'
 import Header from '@/components/header'
 import Sidebar from '@/components/sidebar'
 import CartPanel from '@/components/cart-panel'
 import ProductCard from '@/components/product-card'
 import type { Categoria, Produto } from '@/types'
-
-/* ──────────────────────────────────────────
-   Mock-data (estático) até Supabase ficar pronto
-   ────────────────────────────────────────── */
-const mockCategorias: Categoria[] = [
-  { id: 1, nome: 'Unhas em Gel',        slug: 'unhas-em-gel',        descricao: 'Alongamento e blindagem em gel',    imagem_url: null, ordem: 1, ativo: true },
-  { id: 2, nome: 'Esmaltação',          slug: 'esmaltacao',          descricao: 'Esmaltação tradicional e em gel',   imagem_url: null, ordem: 2, ativo: true },
-  { id: 3, nome: 'Decoração',           slug: 'decoracao',           descricao: 'Adesivos, francesinha e nail art',  imagem_url: null, ordem: 3, ativo: true },
-  { id: 4, nome: 'Alongamento Acrílico',slug: 'alongamento-acrilico',descricao: 'Unhas de acrílico',                  imagem_url: null, ordem: 4, ativo: true },
-  { id: 5, nome: 'Fibra de Vidro',      slug: 'fibra-de-vidro',      descricao: 'Alongamento com fibra de vidro',    imagem_url: null, ordem: 5, ativo: true },
-  { id: 6, nome: 'Manicure',            slug: 'manicure',            descricao: 'Corte e lixa',                      imagem_url: null, ordem: 6, ativo: true },
-  { id: 7, nome: 'Pedicure',            slug: 'pedicure',            descricao: 'Cuidados para os pés',              imagem_url: null, ordem: 7, ativo: true },
-  { id: 8, nome: 'Tratamentos',         slug: 'tratamentos',         descricao: 'Hidratação e fortalecedores',       imagem_url: null, ordem: 8, ativo: true },
-]
-
-const mockProdutos: Produto[] = [
-  { id: 1,  categoria_id: 1, nome: 'Gel Builder',           descricao: 'Base fortalecedora em gel para unhas naturais.',       preco: 89.90, promocao: true,  preco_promocional: 69.90, imagem_url: null, ordem: 1,  ativo: true, destaque: true },
-  { id: 2,  categoria_id: 1, nome: 'Tips em Gel',           descricao: 'Alongamento com tips e gel UV.',                        preco: 129.90, promocao: false, preco_promocional: null,  imagem_url: null, ordem: 2,  ativo: true, destaque: true },
-  { id: 3,  categoria_id: 2, nome: 'Esmalte em Gel',        descricao: 'Esmaltação em gel com cabine UV (duração 15+ dias).',   preco: 59.90, promocao: false, preco_promocional: null,  imagem_url: null, ordem: 1,  ativo: true, destaque: true },
-  { id: 4,  categoria_id: 2, nome: 'Esmalte Tradicional',   descricao: 'Esmaltação tradicional com secagem natural.',            preco: 35.00, promocao: true,  preco_promocional: 25.00, imagem_url: null, ordem: 2,  ativo: true, destaque: false },
-  { id: 5,  categoria_id: 3, nome: 'Francesinha Premium',   descricao: 'Francesinha clássica ou colorida feita à mão.',         preco: 45.00, promocao: false, preco_promocional: null,  imagem_url: null, ordem: 1,  ativo: true, destaque: true },
-  { id: 6,  categoria_id: 3, nome: 'Kit Adesivos 3D',       descricao: 'Pacote com 20 adesivos metálicos e florais.',            preco: 29.90, promocao: false, preco_promocional: null,  imagem_url: null, ordem: 2,  ativo: true, destaque: false },
-  { id: 7,  categoria_id: 4, nome: 'Alongamento Acrílico',  descricao: 'Moldagem em acrílico para unhas longas e resistentes.',  preco: 149.90, promocao: true,  preco_promocional: 119.90, imagem_url: null, ordem: 1,  ativo: true, destaque: true },
-  { id: 8,  categoria_id: 5, nome: 'Fibra de Vidro',        descricao: 'Alongamento natural com fibra de vidro.',               preco: 169.90, promocao: false, preco_promocional: null,  imagem_url: null, ordem: 1,  ativo: true, destaque: false },
-  { id: 9,  categoria_id: 6, nome: 'Manicure Completa',     descricao: 'Corte, lixa, cutículas e hidratação.',                   preco: 45.00, promocao: true,  preco_promocional: 35.00, imagem_url: null, ordem: 1,  ativo: true, destaque: true },
-  { id: 10, categoria_id: 6, nome: 'Corte e Lixa',          descricao: 'Apenas corte e formatação das unhas.',                    preco: 25.00, promocao: false, preco_promocional: null,  imagem_url: null, ordem: 2,  ativo: true, destaque: false },
-  { id: 11, categoria_id: 7, nome: 'Pedicure Completo',     descricao: 'Pés: corte, cutículas, hidratação e esmaltação.',         preco: 55.00, promocao: false, preco_promocional: null,  imagem_url: null, ordem: 1,  ativo: true, destaque: true },
-  { id: 12, categoria_id: 8, nome: 'Hidratação Intensiva',  descricao: 'Hidratação com óleos e cremes fortalecedores.',          preco: 39.90, promocao: false, preco_promocional: null,  imagem_url: null, ordem: 1,  ativo: true, destaque: false },
-]
+import { getCategorias, getProdutos } from '@/lib/queries'
 
 /* ──────────────────────────────────────────
    Utilitário de preço para o toast
@@ -48,24 +20,56 @@ function formatPrice(value: number): string {
 }
 
 export default function Home() {
+  const [categorias, setCategorias] = useState<Categoria[]>([])
+  const [produtos, setProdutos] = useState<Produto[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null)
+
+  /* ── Fetch real data from Supabase on mount ── */
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadData() {
+      try {
+        const [cats, prods] = await Promise.all([
+          getCategorias(),
+          getProdutos(),
+        ])
+        if (!cancelled) {
+          setCategorias(cats)
+          setProdutos(prods)
+        }
+      } catch (err) {
+        console.error('Erro ao carregar dados:', err)
+        if (!cancelled) {
+          setError('Não foi possível carregar os dados.')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadData()
+    return () => { cancelled = true }
+  }, [])
 
   /* Filtra destaques + produtos por categoria */
   const destaques = useMemo(
-    () => mockProdutos.filter((p) => p.ativo && p.destaque),
-    [],
+    () => produtos.filter((p) => p.ativo && p.destaque),
+    [produtos],
   )
 
   const produtosPorCategoria = useMemo(() => {
     const map = new Map<number, Produto[]>()
-    for (const p of mockProdutos) {
+    for (const p of produtos) {
       if (!p.ativo) continue
       const arr = map.get(p.categoria_id) ?? []
       arr.push(p)
       map.set(p.categoria_id, arr)
     }
     return map
-  }, [])
+  }, [produtos])
 
   const handleAddWithToast = (produto: Produto) => {
     const preco =
@@ -78,6 +82,63 @@ export default function Home() {
     })
   }
 
+  /* ── Loading state ── */
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col bg-[#1A1612] text-[#F8F1E9]">
+        <Header />
+        <div className="flex flex-1 items-center justify-center pt-16">
+          <div className="text-center">
+            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#C9A96E] border-t-transparent" />
+            <p className="text-[#E8D5B0]/70">Carregando...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Error state ── */
+  if (error) {
+    return (
+      <div className="flex min-h-screen flex-col bg-[#1A1612] text-[#F8F1E9]">
+        <Header />
+        <div className="flex flex-1 items-center justify-center pt-16">
+          <div className="max-w-md text-center">
+            <p className="mb-4 text-4xl">😕</p>
+            <p className="mb-2 text-lg text-[#E8D5B0]">{error}</p>
+            <p className="text-sm text-[#E8D5B0]/50">
+              Tente recarregar a página ou volte mais tarde.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Empty state (dados carregaram mas não há nada) ── */
+  const hasCategorias = categorias.length > 0
+  const hasProdutos = produtos.length > 0
+
+  if (!hasCategorias && !hasProdutos) {
+    return (
+      <div className="flex min-h-screen flex-col bg-[#1A1612] text-[#F8F1E9]">
+        <Header />
+        <div className="flex flex-1 items-center justify-center pt-16">
+          <div className="max-w-md text-center">
+            <p className="mb-4 text-4xl">🛍️</p>
+            <p className="mb-2 text-lg text-[#E8D5B0]">
+              Nenhum produto disponível no momento.
+            </p>
+            <p className="text-sm text-[#E8D5B0]/50">
+              Volte em breve para conferir nossas novidades.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Main layout with real data ── */
   return (
     <div className="flex min-h-screen flex-col bg-[#1A1612] text-[#F8F1E9]">
       {/* Toaster global */}
@@ -100,7 +161,7 @@ export default function Home() {
         {/* Sidebar (esquerda) — fixa em desktop */}
         <aside className="hidden lg:block">
           <Sidebar
-            categorias={mockCategorias}
+            categorias={categorias}
             categoriaAtiva={categoriaAtiva}
           />
         </aside>
@@ -131,24 +192,26 @@ export default function Home() {
           </section>
 
           {/* ── Produtos em Destaque ── */}
-          <section id="destaques" className="mb-14">
-            <h2 className="mb-6 font-serif text-2xl font-semibold text-[#C9A96E]">
-              ✨ Produtos em Destaque
-            </h2>
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {destaques.map((produto) => (
-                <div key={produto.id} onClick={() => handleAddWithToast(produto)}>
-                  <ProductCard produto={produto} />
-                </div>
-              ))}
-            </div>
-          </section>
+          {destaques.length > 0 && (
+            <section id="destaques" className="mb-14">
+              <h2 className="mb-6 font-serif text-2xl font-semibold text-[#C9A96E]">
+                ✨ Produtos em Destaque
+              </h2>
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {destaques.map((produto) => (
+                  <div key={produto.id} onClick={() => handleAddWithToast(produto)}>
+                    <ProductCard produto={produto} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* ── Categorias como seções ── */}
-          {mockCategorias
+          {categorias
             .filter((cat) => cat.ativo && produtosPorCategoria.has(cat.id))
             .map((categoria) => {
-              const produtos = produtosPorCategoria.get(categoria.id)!
+              const prods = produtosPorCategoria.get(categoria.id)!
               return (
                 <section key={categoria.id} className="mb-14">
                   <div className="mb-2 flex items-baseline justify-between">
@@ -162,7 +225,7 @@ export default function Home() {
                     )}
                   </div>
                   <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {produtos.map((produto) => (
+                    {prods.map((produto) => (
                       <div key={produto.id} onClick={() => handleAddWithToast(produto)}>
                         <ProductCard produto={produto} />
                       </div>
