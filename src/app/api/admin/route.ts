@@ -12,20 +12,22 @@ type TableName = 'categorias' | 'produtos'
 
 const ALLOWED_TABLES: TableName[] = ['categorias', 'produtos']
 
+function checkAuth(password: string) {
+  return password === 'admin123'
+}
+
+/* ── UPDATE (PUT) ── */
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json()
     const { table, id, data, password } = body
 
-    // Simple auth
-    if (password !== 'admin123') {
+    if (!checkAuth(password)) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     if (!ALLOWED_TABLES.includes(table)) {
       return NextResponse.json({ error: 'Tabela inválida' }, { status: 400 })
     }
-
     if (!id || !data) {
       return NextResponse.json({ error: 'id e data são obrigatórios' }, { status: 400 })
     }
@@ -38,41 +40,53 @@ export async function PUT(req: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
-
     return NextResponse.json({ success: true })
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }
 
 export async function PATCH(req: NextRequest) {
-  // Same as PUT for simplicity
   return PUT(req)
 }
 
+/* ── INSERT + REORDER (POST) ── */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { table, id, data, password, action } = body
+    const { table, data, password, action } = body
 
-    if (password !== 'admin123') {
+    if (!checkAuth(password)) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
     if (!ALLOWED_TABLES.includes(table)) {
       return NextResponse.json({ error: 'Tabela inválida' }, { status: 400 })
     }
 
+    /* ── Reorder ── */
     if (action === 'reorder') {
-      // Reorder: data = [{ id, ordem }]
-      for (const item of data || []) {
+      for (const item of (data || [])) {
         await supabase.from(table).update({ ordem: item.ordem }).eq('id', item.id)
       }
       return NextResponse.json({ success: true })
     }
 
+    /* ── Insert ── */
+    if (action === 'insert') {
+      const { error, data: inserted } = await supabase
+        .from(table)
+        .insert(data)
+        .select('id')
+        .single()
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+      return NextResponse.json({ success: true, id: inserted?.id })
+    }
+
     return NextResponse.json({ error: 'Ação inválida' }, { status: 400 })
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

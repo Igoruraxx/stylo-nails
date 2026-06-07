@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { ChevronUp, ChevronDown, Pencil, LogOut, Eye, ArrowLeft, ShoppingBag, Tag, Save, X, Star } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { ChevronUp, ChevronDown, Pencil, LogOut, Eye, ArrowLeft, ShoppingBag, Tag, Save, X, Star, Plus, Upload } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import type { Categoria, Produto } from '@/types'
 
@@ -95,7 +95,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [loading, setLoading] = useState(true)
-  const [secao, setSecao] = useState<'categorias' | 'produtos' | 'preview'>('produtos')
+  const [secao, setSecao] = useState<'categorias' | 'produtos' | 'preview'>('categorias')
 
   // Edit state - categoria
   const [editCatId, setEditCatId] = useState<number | null>(null)
@@ -104,6 +104,19 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   // Edit state - produto
   const [editProdId, setEditProdId] = useState<number | null>(null)
   const [editProd, setEditProd] = useState<Partial<Produto>>({})
+
+  // New category
+  const [novaCatAberta, setNovaCatAberta] = useState(false)
+  const [novaCatNome, setNovaCatNome] = useState('')
+  const [novaCatSlug, setNovaCatSlug] = useState('')
+
+  // New product
+  const [novoProdAberto, setNovoProdAberto] = useState(false)
+  const [novoProd, setNovoProd] = useState({ categoria_id: 0, nome: '', preco: 0, promocao: false, preco_promocional: 0, destaque: false })
+  const [novoProdImg, setNovoProdImg] = useState<File | null>(null)
+  const [novoProdImgPreview, setNovoProdImgPreview] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Feedback
   const [saving, setSaving] = useState(false)
@@ -114,7 +127,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
   const showFeedback = (msg: string) => {
     setFeedback(msg)
-    setTimeout(() => setFeedback(''), 2000)
+    setTimeout(() => setFeedback(''), 2500)
   }
 
   // Fetch data
@@ -142,9 +155,50 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       if (!res.ok) throw new Error(await res.text())
       showFeedback('✅ Salvo!')
     } catch (e: any) {
-      showFeedback('❌ Erro ao salvar: ' + e.message)
+      showFeedback('❌ Erro: ' + e.message)
     }
     setSaving(false)
+  }
+
+  /* ── INSERT via API ── */
+  const insertToServer = async (table: string, data: any) => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table, data, password: PASS, action: 'insert' }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+      showFeedback('✅ Criado!')
+      return json.id as number
+    } catch (e: any) {
+      showFeedback('❌ Erro: ' + e.message)
+      return null
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  /* ── Upload imagem pro Storage ── */
+  const uploadImage = async (file: File, pasta: string): Promise<string | null> => {
+    setUploading(true)
+    try {
+      const ext = file.name.split('.').pop() || 'jpg'
+      const fileName = `${pasta}/admin-${Date.now()}.${ext}`
+      const { error: uploadErr } = await supabase.storage
+        .from('produtos')
+        .upload(fileName, file, { upsert: true })
+      if (uploadErr) throw new Error(uploadErr.message)
+      const { data: { publicUrl } } = supabase.storage.from('produtos').getPublicUrl(fileName)
+      return publicUrl
+    } catch (e: any) {
+      showFeedback('❌ Erro upload: ' + e.message)
+      return null
+    } finally {
+      setUploading(false)
+    }
   }
 
   /* ── Categoria handlers ── */
@@ -160,6 +214,24 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     setEditCatId(null)
   }
 
+  const criarCategoria = async () => {
+    if (!novaCatNome.trim()) return
+    const slug = novaCatSlug.trim() || novaCatNome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    const novaOrdem = categorias.length + 1
+    const id = await insertToServer('categorias', {
+      nome: novaCatNome.trim(),
+      slug,
+      ordem: novaOrdem,
+      ativo: true,
+    })
+    if (id) {
+      setCategorias(prev => [...prev, { id, nome: novaCatNome.trim(), slug, ordem: novaOrdem, ativo: true, descricao: null, imagem_url: null, created_at: '', updated_at: '' }])
+      setNovaCatAberta(false)
+      setNovaCatNome('')
+      setNovaCatSlug('')
+    }
+  }
+
   const moveCat = async (id: number, dir: 'up' | 'down') => {
     setCategorias(prev => {
       const idx = prev.findIndex(c => c.id === id)
@@ -170,7 +242,6 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       const swap = dir === 'up' ? idx - 1 : idx + 1
       ;[arr[idx], arr[swap]] = [arr[swap], arr[idx]]
       const reordered = arr.map((c, i) => ({ ...c, ordem: i + 1 }))
-      // Save reorder
       fetch('/api/admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -207,12 +278,56 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     }))
   }
 
+  /* ── Criar Produto ── */
+  const handleNovoProdImg = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setNovoProdImg(file)
+    const reader = new FileReader()
+    reader.onload = () => setNovoProdImgPreview(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  const criarProduto = async () => {
+    if (!novoProd.nome.trim() || !novoProd.categoria_id) {
+      showFeedback('⚠️ Preencha nome e selecione uma categoria')
+      return
+    }
+
+    let imagem_url: string | null = null
+    if (novoProdImg) {
+      const cat = categorias.find(c => c.id === novoProd.categoria_id)
+      const pasta = cat?.slug || `cat-${novoProd.categoria_id}`
+      imagem_url = await uploadImage(novoProdImg, pasta)
+      if (!imagem_url) return
+    }
+
+    const id = await insertToServer('produtos', {
+      categoria_id: novoProd.categoria_id,
+      nome: novoProd.nome.trim(),
+      preco: novoProd.preco,
+      promocao: novoProd.promocao,
+      preco_promocional: novoProd.promocao ? novoProd.preco_promocional || Number((novoProd.preco * 0.8).toFixed(2)) : null,
+      destaque: novoProd.destaque,
+      imagem_url,
+      ordem: produtos.filter(p => p.categoria_id === novoProd.categoria_id).length + 1,
+      ativo: true,
+    })
+
+    if (id) {
+      await fetchData() // recarrega tudo
+      setNovoProdAberto(false)
+      setNovoProd({ categoria_id: 0, nome: '', preco: 0, promocao: false, preco_promocional: 0, destaque: false })
+      setNovoProdImg(null)
+      setNovoProdImgPreview('')
+    }
+  }
+
   // Filtered products
   const produtosFiltrados = filtroCategoria
     ? produtos.filter(p => p.categoria_id === filtroCategoria)
     : produtos
 
-  // Produtos agrupados por categoria (para exibição)
   const produtosPorCategoria = filtroCategoria 
     ? [{ categoria: categorias.find(c => c.id === filtroCategoria), produtos: produtosFiltrados }]
     : categorias.map(cat => ({ categoria: cat, produtos: produtos.filter(p => p.categoria_id === cat.id) }))
@@ -241,10 +356,11 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {feedback && <span className="text-xs text-green-400">{feedback}</span>}
+            {feedback && <span className={`text-xs ${feedback.includes('❌') ? 'text-red-400' : 'text-green-400'}`}>{feedback}</span>}
             {saving && <span className="text-xs text-[#C9A96E]">Salvando...</span>}
+            {uploading && <span className="text-xs text-[#C9A96E]">Enviando foto...</span>}
             <a href="/" className="flex items-center gap-1.5 rounded-lg border border-[#C9A96E]/20 px-3 py-2 text-xs font-medium text-[#E8D5B0]/70 transition-all hover:border-[#C9A96E]/40 hover:text-[#C9A96E]">
-              <ArrowLeft size={14} /> Voltar ao Site
+              <ArrowLeft size={14} /> Voltar
             </a>
             <button onClick={onLogout} className="flex items-center gap-1.5 rounded-lg bg-red-500/10 px-3 py-2 text-xs font-medium text-red-400 transition-all hover:bg-red-500/20">
               <LogOut size={14} /> Sair
@@ -273,7 +389,41 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         {/* ═══ CATEGORIAS ═══ */}
         {secao === 'categorias' && (
           <section>
-            <h2 className="mb-4 font-serif text-xl font-semibold text-[#C9A96E]">📂 Categorias</h2>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-serif text-xl font-semibold text-[#C9A96E]">📂 Categorias</h2>
+              <button onClick={() => setNovaCatAberta(true)}
+                className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#B8860B] to-[#DAA520] px-4 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:brightness-110 active:scale-[0.97]">
+                <Plus size={14} /> Adicionar Categoria
+              </button>
+            </div>
+
+            {/* ── Nova Categoria ── */}
+            {novaCatAberta && (
+              <div className="mb-4 rounded-xl border border-[#C9A96E]/20 bg-[#2E2820] p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="text-sm font-medium text-[#C9A96E]">Nova Categoria</span>
+                </div>
+                <div className="space-y-3">
+                  <input type="text" value={novaCatNome} onChange={e => setNovaCatNome(e.target.value)}
+                    placeholder="Nome da categoria"
+                    className="w-full rounded-lg border border-[#C9A96E]/20 bg-[#1A1612] px-4 py-2.5 text-sm text-[#F8F1E9] placeholder-[#E8D5B0]/30 outline-none focus:border-[#B8860B] focus:ring-1 focus:ring-[#B8860B]/40" />
+                  <input type="text" value={novaCatSlug} onChange={e => setNovaCatSlug(e.target.value)}
+                    placeholder="Slug (deixar vazio = automático)"
+                    className="w-full rounded-lg border border-[#C9A96E]/20 bg-[#1A1612] px-4 py-2.5 text-sm text-[#E8D5B0]/70 placeholder-[#E8D5B0]/30 outline-none focus:border-[#B8860B] focus:ring-1 focus:ring-[#B8860B]/40" />
+                  <div className="flex items-center gap-2">
+                    <button onClick={criarCategoria} disabled={!novaCatNome.trim() || saving}
+                      className="flex items-center gap-1.5 rounded-lg bg-green-500/20 px-4 py-2 text-xs font-medium text-green-400 transition-all hover:bg-green-500/30 disabled:opacity-40 disabled:cursor-not-allowed">
+                      <Save size={14} /> Criar
+                    </button>
+                    <button onClick={() => { setNovaCatAberta(false); setNovaCatNome(''); setNovaCatSlug('') }}
+                      className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-medium text-red-400/60 transition-all hover:bg-red-500/10 hover:text-red-400">
+                      <X size={14} /> Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               {categorias.map((cat, idx) => (
                 <div key={cat.id} className="flex items-center gap-3 rounded-xl border border-[#C9A96E]/10 bg-[#2E2820] px-4 py-3 transition-all hover:border-[#C9A96E]/20">
@@ -319,7 +469,6 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <h2 className="font-serif text-xl font-semibold text-[#C9A96E]">📦 Produtos</h2>
               
-              {/* Filter by category */}
               <select
                 value={filtroCategoria ?? ''}
                 onChange={e => setFiltroCategoria(e.target.value ? Number(e.target.value) : null)}
@@ -330,7 +479,107 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                   <option key={cat.id} value={cat.id}>{cat.nome} ({produtos.filter(p => p.categoria_id === cat.id).length})</option>
                 ))}
               </select>
+
+              <button onClick={() => setNovoProdAberto(true)}
+                className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#B8860B] to-[#DAA520] px-4 py-2 text-xs font-semibold text-white shadow-lg transition-all hover:brightness-110 active:scale-[0.97]">
+                <Plus size={14} /> Adicionar Produto
+              </button>
             </div>
+
+            {/* ── Novo Produto ── */}
+            {novoProdAberto && (
+              <div className="mb-6 rounded-xl border border-[#C9A96E]/20 bg-[#2E2820] p-5">
+                <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[#C9A96E]">
+                  <Plus size={16} /> Novo Produto
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {/* Nome */}
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-xs text-[#E8D5B0]/60">Nome do Produto *</label>
+                    <input type="text" value={novoProd.nome} onChange={e => setNovoProd(p => ({ ...p, nome: e.target.value }))}
+                      placeholder="Ex: Esmalte Vermelho"
+                      className="w-full rounded-lg border border-[#C9A96E]/20 bg-[#1A1612] px-4 py-2.5 text-sm text-[#F8F1E9] placeholder-[#E8D5B0]/30 outline-none focus:border-[#B8860B] focus:ring-1 focus:ring-[#B8860B]/40" />
+                  </div>
+
+                  {/* Categoria */}
+                  <div>
+                    <label className="mb-1 block text-xs text-[#E8D5B0]/60">Categoria *</label>
+                    <select value={novoProd.categoria_id} onChange={e => setNovoProd(p => ({ ...p, categoria_id: Number(e.target.value) }))}
+                      className="w-full rounded-lg border border-[#C9A96E]/20 bg-[#1A1612] px-4 py-2.5 text-sm text-[#F8F1E9] outline-none focus:border-[#B8860B] focus:ring-1 focus:ring-[#B8860B]/40">
+                      <option value={0}>Selecione...</option>
+                      {categorias.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Preço */}
+                  <div>
+                    <label className="mb-1 block text-xs text-[#E8D5B0]/60">Preço (R$)</label>
+                    <input type="number" step="0.01" min="0" value={novoProd.preco} onChange={e => setNovoProd(p => ({ ...p, preco: parseFloat(e.target.value) || 0 }))}
+                      className="w-full rounded-lg border border-[#C9A96E]/20 bg-[#1A1612] px-4 py-2.5 text-sm text-[#F8F1E9] outline-none focus:border-[#B8860B] focus:ring-1 focus:ring-[#B8860B]/40" />
+                  </div>
+
+                  {/* Upload foto */}
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-xs text-[#E8D5B0]/60">Foto do Produto</label>
+                    <div className="flex items-center gap-4">
+                      <button onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2 rounded-lg border border-dashed border-[#C9A96E]/30 bg-[#1A1612] px-5 py-4 text-xs text-[#E8D5B0]/50 transition-all hover:border-[#C9A96E]/50 hover:text-[#C9A96E]">
+                        <Upload size={18} />
+                        {novoProdImg ? 'Trocar foto' : 'Escolher foto da galeria'}
+                      </button>
+                      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleNovoProdImg} className="hidden" />
+                      {novoProdImgPreview && (
+                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-[#C9A96E]/20">
+                          <img src={novoProdImgPreview} alt="Preview" className="h-full w-full object-cover" />
+                          <button onClick={() => { setNovoProdImg(null); setNovoProdImgPreview('') }}
+                            className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow"
+                            style={{ fontSize: 11 }}>×</button>
+                        </div>
+                      )}
+                      {novoProdImg && (
+                        <span className="text-[10px] text-[#E8D5B0]/40">{novoProdImg.name}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Toggles */}
+                  <div className="flex items-center gap-6 sm:col-span-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={novoProd.promocao} onChange={() => setNovoProd(p => ({ ...p, promocao: !p.promocao, preco_promocional: !p.promocao ? Number((p.preco * 0.8).toFixed(2)) : 0 }))}
+                        className="h-4 w-4 rounded border-[#C9A96E]/30 bg-[#1A1612] text-[#C9A96E] focus:ring-[#C9A96E]/50" />
+                      <span className="text-xs text-[#E8D5B0]/70">Em promoção</span>
+                    </label>
+                    {novoProd.promocao && (
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-[#E8D5B0]/50">Preço promocional:</label>
+                        <input type="number" step="0.01" value={novoProd.preco_promocional} onChange={e => setNovoProd(p => ({ ...p, preco_promocional: parseFloat(e.target.value) || 0 }))}
+                          className="w-24 rounded-md border border-red-500/30 bg-[#1A1612] px-3 py-1.5 text-sm text-red-300 outline-none focus:ring-2 focus:ring-red-500/50" />
+                      </div>
+                    )}
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={novoProd.destaque} onChange={() => setNovoProd(p => ({ ...p, destaque: !p.destaque }))}
+                        className="h-4 w-4 rounded border-[#C9A96E]/30 bg-[#1A1612] text-[#C9A96E] focus:ring-[#C9A96E]/50" />
+                      <Star size={12} className="text-[#C9A96E]" />
+                      <span className="text-xs text-[#E8D5B0]/70">Destaque</span>
+                    </label>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 sm:col-span-2">
+                    <button onClick={criarProduto} disabled={!novoProd.nome.trim() || !novoProd.categoria_id || saving || uploading}
+                      className="flex items-center gap-1.5 rounded-lg bg-green-500/20 px-5 py-2.5 text-xs font-medium text-green-400 transition-all hover:bg-green-500/30 disabled:opacity-40 disabled:cursor-not-allowed">
+                      {uploading ? 'Enviando foto...' : <><Save size={14} /> Criar Produto</>}
+                    </button>
+                    <button onClick={() => { setNovoProdAberto(false); setNovoProd({ categoria_id: 0, nome: '', preco: 0, promocao: false, preco_promocional: 0, destaque: false }); setNovoProdImg(null); setNovoProdImgPreview('') }}
+                      className="flex items-center gap-1.5 rounded-lg px-5 py-2.5 text-xs font-medium text-red-400/60 transition-all hover:bg-red-500/10 hover:text-red-400">
+                      <X size={14} /> Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-3">
               {produtosPorCategoria.map(({ categoria, produtos: prods }) => {
