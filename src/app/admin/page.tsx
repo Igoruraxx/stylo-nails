@@ -291,6 +291,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     const data: any = {
       nome: editModalData.nome,
       preco: editModalData.preco,
+      categoria_id: editModalData.categoria_id ?? editModalProd.categoria_id,
       promocao: editModalData.promocao,
       preco_promocional: editModalData.promocao ? editModalData.preco_promocional : null,
       destaque: editModalData.destaque,
@@ -778,12 +779,18 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
                 {/* ── Informações ── */}
                 <div className="flex flex-col gap-5 p-6">
-                  {/* ID + Categoria */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-[#E8D5B0]/30">#{editModalProd.id}</span>
-                    <span className="rounded-full bg-[#C9A96E]/10 px-3 py-1 text-[10px] font-medium text-[#C9A96E]">
-                      {categorias.find(c => c.id === editModalProd.categoria_id)?.nome || `Cat ${editModalProd.categoria_id}`}
-                    </span>
+                  {/* ID + Categoria editável */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] text-[#E8D5B0]/30 shrink-0">#{editModalProd.id}</span>
+                    <select
+                      value={editModalData.categoria_id ?? editModalProd.categoria_id}
+                      onChange={e => setEditModalData(p => ({ ...p, categoria_id: Number(e.target.value) }))}
+                      className="flex-1 rounded-lg border border-[#C9A96E]/20 bg-[#1A1612] px-3 py-2 text-xs text-[#F8F1E9] outline-none focus:border-[#B8860B] focus:ring-1 focus:ring-[#B8860B]/40"
+                    >
+                      {categorias.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Nome */}
