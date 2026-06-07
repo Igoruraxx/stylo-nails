@@ -24,7 +24,7 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => void }) {
     setErro('')
     setBloqueado(false)
     
-    // Testa a senha contra a API
+    // Verifica a senha contra a API (server-side)
     try {
       const res = await fetch('/api/admin', {
         method: 'PUT',
@@ -40,27 +40,27 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => void }) {
         onLogin(pw)
         return
       }
-      const json = await res.json()
-      throw new Error(json.error || 'Senha incorreta')
     } catch {
-      const novas = tentativas + 1
-      setTentativas(novas)
-      
-      if (novas >= 5) {
-        setBloqueado(true)
-        setBloqueadoAte(Date.now() + 15000)
-        setErro(`⚠️ Muitas tentativas. Aguarde 15 segundos.`)
-        setTimeout(() => { setBloqueado(false); setTentativas(0) }, 15000)
-      } else if (novas >= 3) {
-        setBloqueado(true)
-        setBloqueadoAte(Date.now() + 5000)
-        setErro(`⚠️ Aguarde 5 segundos para tentar novamente.`)
-        setTimeout(() => { setBloqueado(false) }, 5000)
-      } else {
-        setErro(`Senha incorreta. Tentativa ${novas}/5.`)
-      }
-      setSenha('')
+      // continua para rate limit
     }
+    
+    const novas = tentativas + 1
+    setTentativas(novas)
+    
+    if (novas >= 5) {
+      setBloqueado(true)
+      setBloqueadoAte(Date.now() + 15000)
+      setErro(`⚠️ Muitas tentativas. Aguarde 15 segundos.`)
+      setTimeout(() => { setBloqueado(false); setTentativas(0) }, 15000)
+    } else if (novas >= 3) {
+      setBloqueado(true)
+      setBloqueadoAte(Date.now() + 5000)
+      setErro(`⚠️ Aguarde 5 segundos para tentar novamente.`)
+      setTimeout(() => { setBloqueado(false) }, 5000)
+    } else {
+      setErro(`Senha incorreta. Tentativa ${novas}/5.`)
+    }
+    setSenha('')
   }
 
   const handleSubmit = (e: React.FormEvent) => {
