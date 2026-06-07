@@ -61,7 +61,7 @@ export default function StoreLayout({
         {/* ── Mobile sidebar drawer (slide-in) ── */}
         <div
           className={`
-            fixed inset-0 z-40
+            fixed inset-0 z-[60]
             ${sidebarOpen ? 'pointer-events-auto' : 'pointer-events-none'}
             lg:hidden
           `}

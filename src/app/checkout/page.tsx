@@ -62,8 +62,8 @@ export default function CheckoutPage() {
     }
   }, [carregando, itens.length, router])
 
-  /* ── Validação: libera com nome + endereço apenas ── */
-  const podeEnviar = nome.trim().length > 0 && endereco.trim().length > 0
+  /* ── Validação: libera com nome + endereço + pagamento ── */
+  const podeEnviar = nome.trim().length > 0 && endereco.trim().length > 0 && formaPagamento !== null
 
   /* ── Monta mensagem do WhatsApp ── */
   const buildWhatsAppMessage = useCallback(() => {
@@ -111,7 +111,7 @@ export default function CheckoutPage() {
     e.preventDefault()
 
     if (!podeEnviar) {
-      toast.error('Preencha seu nome e endereço de entrega')
+      toast.error('Preencha nome, endereço e selecione a forma de pagamento')
       return
     }
 
@@ -280,7 +280,7 @@ export default function CheckoutPage() {
             <section className="rounded-xl border border-[#C9A96E]/15 bg-[#2E2820]/60 p-6 backdrop-blur-sm">
               <h2 className="mb-6 font-serif text-lg font-semibold text-[#C9A96E]">
                 Forma de Pagamento
-                <span className="ml-1 text-xs font-normal text-white/40">(opcional)</span>
+                <span className="ml-1 text-xs font-normal text-red-400/60">*</span>
               </h2>
 
               <div className="flex flex-wrap gap-3">
@@ -408,7 +408,8 @@ export default function CheckoutPage() {
               {!podeEnviar && (
                 <p className="mt-3 text-center text-[11px] text-[#E8D5B0]/40">
                   {!nome.trim() && '✏️ Preencha seu nome '}
-                  {!endereco.trim() && '📍 Informe o endereço'}
+                  {!endereco.trim() && '📍 Informe o endereço '}
+                  {!formaPagamento && '💳 Selecione o pagamento'}
                 </p>
               )}
             </div>

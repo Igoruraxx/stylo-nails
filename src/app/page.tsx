@@ -94,7 +94,7 @@ export default function Home() {
           })
           break
         case 'vendas':
-          sorted.sort((a, b) => (b.total_vendas || 0) - (a.total_vendas || 0))
+          sorted.sort((a, b) => (b.estoque || 0) - (a.estoque || 0))
           break
       }
       map.set(catId, sorted)
@@ -190,7 +190,7 @@ export default function Home() {
           {/* Conteúdo */}
           <div className="relative z-10 max-w-xl">
             <h2 className="mb-3 font-serif text-2xl font-bold text-[#C9A96E] sm:text-3xl lg:text-4xl">
-              Beleza que começa nas pontas dos dedos 💅
+              Beleza que começa nas pontas dos dedos
             </h2>
             <p className="mb-6 text-base text-[#E8D5B0]/80 sm:text-lg">
               Produtos premium para unhas impecáveis. Explore nossa linha
@@ -198,7 +198,7 @@ export default function Home() {
             </p>
             <a
               href="#destaques"
-              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#B8860B] to-[#DAA520] px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:brightness-110 hover:shadow-lg hover:shadow-[#C9A96E]/20 active:scale-[0.98]"
+              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#B8860B] to-[#DAA520] px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:brightness-110 hover:shadow-xl hover:shadow-[#C9A96E]/30 active:scale-[0.95]"
             >
               Ver Destaques
             </a>

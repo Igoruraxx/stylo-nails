@@ -76,7 +76,7 @@ export default function ProductCard({ produto }: ProductCardProps) {
               alt={produto.nome}
               className={`h-full w-full object-cover transition-all duration-500 group-hover:scale-110 ${
                 imgLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
+              } ${produto.estoque != null && produto.estoque <= 0 ? 'grayscale' : ''}`}
               onLoad={() => setImgLoaded(true)}
               onError={() => setImgError(true)}
               loading="lazy"
@@ -94,7 +94,28 @@ export default function ProductCard({ produto }: ProductCardProps) {
           </div>
         )}
 
+        {/* Overlay Indisponível */}
+        {produto.estoque != null && produto.estoque <= 0 && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-[1px]">
+            <span className="rounded-lg border border-white/10 bg-black/60 px-4 py-2 text-sm font-semibold text-white/70 backdrop-blur-sm">
+              Indisponível
+            </span>
+          </div>
+        )}
+
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#2E2820] to-transparent" />
+
+        {/* Estoque badge na imagem */}
+        {produto.estoque != null && produto.estoque <= 5 && produto.estoque > 0 && (
+          <span className="absolute right-3 top-3 z-10 animate-pulse rounded-full bg-amber-500/90 px-2.5 py-1 text-[10px] font-bold text-white shadow-lg shadow-amber-500/30">
+            ⚡ Últimas {produto.estoque}
+          </span>
+        )}
+        {produto.estoque != null && produto.estoque === 0 && (
+          <span className="absolute right-3 top-3 z-10 rounded-full bg-red-500/90 px-2.5 py-1 text-[10px] font-bold text-white shadow-lg">
+            Esgotado
+          </span>
+        )}
 
         {produto.promocao && (
           <span className="absolute left-3 top-3 z-10 animate-pulse rounded-full bg-red-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
@@ -130,13 +151,36 @@ export default function ProductCard({ produto }: ProductCardProps) {
           )}
         </div>
 
+        {/* Estoque indicator */}
+        <div className="flex items-center gap-1.5">
+          {produto.estoque != null && produto.estoque > 5 ? (
+            <span className="flex items-center gap-1 text-[10px] text-green-400/70">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
+              Em estoque
+            </span>
+          ) : produto.estoque != null && produto.estoque > 0 ? (
+            <span className="flex items-center gap-1 text-[10px] text-amber-400/70">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+              Apenas {produto.estoque} und.
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[10px] text-red-400/50">
+              <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+              Indisponível
+            </span>
+          )}
+        </div>
+
         {/* Botão Adicionar com gold flash */}
         <button
           onClick={handleAdd}
-          className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-[#1A1612] transition-all active:scale-[0.97] ${
-            flash
-              ? 'animate-gold-flash'
-              : 'bg-[#C9A96E] hover:bg-[#DAA520] hover:shadow-lg hover:shadow-[#C9A96E]/20'
+          disabled={produto.estoque != null && produto.estoque <= 0}
+          className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-300 hover:scale-[1.04] active:scale-[0.95] ${
+            produto.estoque != null && produto.estoque <= 0
+              ? 'bg-white/5 text-white/20 cursor-not-allowed hover:scale-100'
+              : flash
+                ? 'animate-gold-flash text-[#1A1612]'
+                : 'bg-[#C9A96E] text-[#1A1612] hover:bg-[#DAA520] hover:shadow-lg hover:shadow-[#C9A96E]/30'
           }`}
         >
           <Plus size={18} aria-hidden="true" />

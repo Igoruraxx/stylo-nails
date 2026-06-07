@@ -197,7 +197,7 @@ export default function CartPanel({ onClose }: CartPanelProps) {
           {/* Cupom / Frete (placeholder premium) */}
           <div className="mb-4 flex items-center justify-between rounded-lg border border-dashed border-[#C9A96E]/10 px-4 py-2.5">
             <span className="text-xs text-[#E8D5B0]/30">Frete</span>
-            <span className="text-xs text-[#E8D5B0]/40">Calcular no checkout</span>
+            <span className="text-xs text-[#E8D5B0]/40">Consulte o valor do frete para seu endereço</span>
           </div>
 
           {/* Total */}

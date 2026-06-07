@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { Pencil, LogOut, Eye, ArrowLeft, ShoppingBag, Tag, Save, X, Star, Plus, Upload, GripVertical } from 'lucide-react'
+import { Pencil, LogOut, Eye, ArrowLeft, ShoppingBag, Tag, Save, X, Star, Plus, Upload, GripVertical, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import type { Categoria, Produto } from '@/types'
 
@@ -157,7 +157,7 @@ function AdminPanel({ onLogout, adminPassword }: { onLogout: () => void; adminPa
 
   // New product
   const [novoProdAberto, setNovoProdAberto] = useState(false)
-  const [novoProd, setNovoProd] = useState({ categoria_id: 0, nome: '', preco: 0, promocao: false, preco_promocional: 0, destaque: false })
+  const [novoProd, setNovoProd] = useState({ categoria_id: 0, nome: '', preco: 0, promocao: false, preco_promocional: 0, destaque: false, estoque: 0 })
   const [novoProdImg, setNovoProdImg] = useState<File | null>(null)
   const [novoProdImgPreview, setNovoProdImgPreview] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -177,6 +177,9 @@ function AdminPanel({ onLogout, adminPassword }: { onLogout: () => void; adminPa
   const [editModalImg, setEditModalImg] = useState<File | null>(null)
   const [editModalImgPreview, setEditModalImgPreview] = useState('')
   const editFileInputRef = useRef<HTMLInputElement>(null)
+
+  // Delete confirm state
+  const [confirmDelete, setConfirmDelete] = useState<{ table: string; id: number; nome: string } | null>(null)
 
   // Drag state
   const [dragIdx, setDragIdx] = useState<number | null>(null)
@@ -214,6 +217,26 @@ function AdminPanel({ onLogout, adminPassword }: { onLogout: () => void; adminPa
       showFeedback('❌ Erro: ' + e.message)
     }
     setSaving(false)
+  }
+
+  /* ── DELETE via API ── */
+  const deleteFromServer = async (table: string, id: number) => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table, id, password: adminPassword }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      showFeedback('🗑️ Deletado!')
+      return true
+    } catch (e: any) {
+      showFeedback('❌ Erro: ' + e.message)
+      return false
+    } finally {
+      setSaving(false)
+    }
   }
 
   /* ── INSERT via API ── */
@@ -315,6 +338,7 @@ function AdminPanel({ onLogout, adminPassword }: { onLogout: () => void; adminPa
       preco_promocional: prod.preco_promocional,
       destaque: prod.destaque,
       descricao: prod.descricao,
+      estoque: prod.estoque,
     })
     setEditModalImg(null)
     setEditModalImgPreview('')
@@ -341,6 +365,7 @@ function AdminPanel({ onLogout, adminPassword }: { onLogout: () => void; adminPa
       preco_promocional: editModalData.promocao ? editModalData.preco_promocional : null,
       destaque: editModalData.destaque,
       descricao: editModalData.descricao || null,
+      estoque: editModalData.estoque ?? 0,
     }
     if (imagem_url !== editModalProd.imagem_url) {
       data.imagem_url = imagem_url
@@ -393,12 +418,13 @@ function AdminPanel({ onLogout, adminPassword }: { onLogout: () => void; adminPa
       imagem_url,
       ordem: produtos.filter(p => p.categoria_id === novoProd.categoria_id).length + 1,
       ativo: true,
+      estoque: novoProd.estoque ?? 0,
     })
 
     if (id) {
       await fetchData() // recarrega tudo
       setNovoProdAberto(false)
-      setNovoProd({ categoria_id: 0, nome: '', preco: 0, promocao: false, preco_promocional: 0, destaque: false })
+      setNovoProd({ categoria_id: 0, nome: '', preco: 0, promocao: false, preco_promocional: 0, destaque: false, estoque: 0 })
       setNovoProdImg(null)
       setNovoProdImgPreview('')
     }
@@ -555,7 +581,11 @@ function AdminPanel({ onLogout, adminPassword }: { onLogout: () => void; adminPa
                         <button onClick={() => setEditCatId(null)} className="rounded-md p-1.5 text-red-400/60 transition-all hover:bg-red-500/10 hover:text-red-400"><X size={16} /></button>
                       </>
                     ) : (
-                      <button onClick={() => startEditCat(cat)} className="rounded-md p-1.5 text-[#E8D5B0]/40 transition-all hover:bg-[#1A1612] hover:text-[#C9A96E]"><Pencil size={16} /></button>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => startEditCat(cat)} className="rounded-md p-1.5 text-[#E8D5B0]/40 transition-all hover:bg-[#1A1612] hover:text-[#C9A96E]"><Pencil size={16} /></button>
+                        <button onClick={() => setConfirmDelete({ table: 'categorias', id: cat.id, nome: cat.nome })}
+                          className="rounded-md p-1.5 text-[#E8D5B0]/20 transition-all hover:bg-red-500/10 hover:text-red-400"><Trash2 size={15} /></button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -690,7 +720,7 @@ function AdminPanel({ onLogout, adminPassword }: { onLogout: () => void; adminPa
                       className="flex items-center gap-1.5 rounded-lg bg-green-500/20 px-5 py-2.5 text-xs font-medium text-green-400 transition-all hover:bg-green-500/30 disabled:opacity-40 disabled:cursor-not-allowed">
                       {uploading ? 'Enviando foto...' : <><Save size={14} /> Criar Produto</>}
                     </button>
-                    <button onClick={() => { setNovoProdAberto(false); setNovoProd({ categoria_id: 0, nome: '', preco: 0, promocao: false, preco_promocional: 0, destaque: false }); setNovoProdImg(null); setNovoProdImgPreview('') }}
+                    <button onClick={() => { setNovoProdAberto(false); setNovoProd({ categoria_id: 0, nome: '', preco: 0, promocao: false, preco_promocional: 0, destaque: false, estoque: 0 }); setNovoProdImg(null); setNovoProdImgPreview('') }}
                       className="flex items-center gap-1.5 rounded-lg px-5 py-2.5 text-xs font-medium text-red-400/60 transition-all hover:bg-red-500/10 hover:text-red-400">
                       <X size={14} /> Cancelar
                     </button>
@@ -718,6 +748,16 @@ function AdminPanel({ onLogout, adminPassword }: { onLogout: () => void; adminPa
                           <span className="shrink-0 text-[10px] text-[#E8D5B0]/30 w-7">#{prod.id}</span>
                           <span className="min-w-0 flex-1 truncate text-sm font-medium">{prod.nome}</span>
                           <span className="shrink-0 text-sm text-[#C9A96E]">{formatPrice(prod.preco)}</span>
+                          {/* Estoque no admin */}
+                          <span className={`shrink-0 text-xs tabular-nums ${
+                            prod.estoque != null && prod.estoque <= 0
+                              ? 'text-red-400'
+                              : prod.estoque != null && prod.estoque <= 5
+                                ? 'text-amber-400'
+                                : 'text-green-400/60'
+                          }`}>
+                            {prod.estoque ?? '?'} und.
+                          </span>
                           <div className="flex shrink-0 items-center gap-1.5">
                             {prod.promocao && <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold text-red-400">PROMO</span>}
                             {prod.destaque && <span className="rounded-full bg-[#C9A96E]/15 px-2 py-0.5 text-[10px] font-semibold text-[#C9A96E]">DESTAQUE</span>}
@@ -725,6 +765,10 @@ function AdminPanel({ onLogout, adminPassword }: { onLogout: () => void; adminPa
                           <button onClick={(e) => { e.stopPropagation(); openEditModal(prod) }}
                             className="rounded-md p-1.5 text-[#E8D5B0]/40 transition-all hover:bg-[#1A1612] hover:text-[#C9A96E]">
                             <Pencil size={16} />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ table: 'produtos', id: prod.id, nome: prod.nome }) }}
+                            className="rounded-md p-1.5 text-[#E8D5B0]/20 transition-all hover:bg-red-500/10 hover:text-red-400">
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       ))}
@@ -873,6 +917,16 @@ function AdminPanel({ onLogout, adminPassword }: { onLogout: () => void; adminPa
                     )}
                   </div>
 
+                  {/* Estoque */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-[10px] uppercase tracking-wider text-[#E8D5B0]/40">Estoque (unidades)</label>
+                      <input type="number" min="0" value={editModalData.estoque ?? 0}
+                        onChange={e => setEditModalData(p => ({ ...p, estoque: parseInt(e.target.value) || 0 }))}
+                        className="w-full rounded-lg border border-[#C9A96E]/20 bg-[#1A1612] px-4 py-2.5 text-sm text-[#F8F1E9] outline-none focus:border-[#B8860B] focus:ring-1 focus:ring-[#B8860B]/40" />
+                    </div>
+                  </div>
+
                   {/* Toggles */}
                   <div className="flex flex-wrap items-center gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -911,6 +965,51 @@ function AdminPanel({ onLogout, adminPassword }: { onLogout: () => void; adminPa
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ CONFIRM DELETE DIALOG ═══ */}
+        {confirmDelete && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setConfirmDelete(null)}>
+            <div className="w-full max-w-sm rounded-2xl border border-red-500/20 bg-[#2E2820] p-6 shadow-2xl shadow-black/50"
+              onClick={e => e.stopPropagation()}>
+              <div className="mb-4 text-center">
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10">
+                  <Trash2 size={24} className="text-red-400" />
+                </div>
+                <h3 className="font-serif text-lg font-semibold text-[#F8F1E9]">Confirmar exclusão</h3>
+                <p className="mt-2 text-sm text-[#E8D5B0]/60">
+                  Tem certeza que deseja apagar <strong className="text-[#C9A96E]">{confirmDelete.nome}</strong>?
+                  {confirmDelete.table === 'categorias' && (
+                    <span className="block mt-1 text-xs text-red-400/70">
+                      Todos os produtos desta categoria também serão removidos.
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={async () => {
+                  const ok = await deleteFromServer(confirmDelete.table, confirmDelete.id)
+                  if (ok) {
+                    if (confirmDelete.table === 'categorias') {
+                      setCategorias(prev => prev.filter(c => c.id !== confirmDelete.id))
+                    } else {
+                      setProdutos(prev => prev.filter(p => p.id !== confirmDelete.id))
+                    }
+                    await fetchData()
+                  }
+                  setConfirmDelete(null)
+                }}
+                  className="flex-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-red-600 active:scale-[0.97]">
+                  Sim, Apagar
+                </button>
+                <button onClick={() => setConfirmDelete(null)}
+                  className="flex-1 rounded-lg border border-white/10 px-4 py-2.5 text-sm font-medium text-[#E8D5B0]/60 transition-all hover:bg-white/5">
+                  Cancelar
+                </button>
               </div>
             </div>
           </div>

@@ -201,7 +201,7 @@ export default function Header({ categorias = [], logoUrl = '/logo.png' }: Heade
           SIDEBAR DRAWER — mobile only (abre do ☰)
           ═══════════════════════════════════════════════════════ */}
       <div
-        className={`fixed inset-0 z-40 transition-all duration-300 lg:hidden ${
+        className={`fixed inset-0 z-[60] transition-all duration-300 lg:hidden ${
           sidebarOpen ? 'pointer-events-auto' : 'pointer-events-none'
         }`}
       >
