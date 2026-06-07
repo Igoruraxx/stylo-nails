@@ -1,22 +1,24 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Menu, X, ShoppingBag } from 'lucide-react'
+import { ShoppingBag } from 'lucide-react'
 import { useCart } from '@/lib/cart-context'
 
 interface HeaderProps {
   onToggleSidebar?: () => void
+  onToggleCart?: () => void
 }
 
-export default function Header({ onToggleSidebar }: HeaderProps) {
+export default function Header({ onToggleSidebar, onToggleCart }: HeaderProps) {
   const [clickCount, setClickCount] = useState(0)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
   const { totalItens } = useCart()
 
-  const handleLogoClick = useCallback(() => {
+  /* ── Admin easter egg (5 taps on logo or hidden admin icon) ── */
+  const tapAdmin = useCallback(() => {
     const next = clickCount + 1
     setClickCount(next)
     if (next >= 5) {
@@ -25,54 +27,117 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     }
   }, [clickCount, router])
 
-  const handleToggleSidebar = useCallback(() => {
-    setSidebarOpen((prev) => {
-      const next = !prev
-      onToggleSidebar?.()
-      return next
-    })
-  }, [onToggleSidebar])
+  /* ── Generic cart click: toggle panel or fallback to /cart ── */
+  const handleCartClick = useCallback(() => {
+    if (onToggleCart) {
+      onToggleCart()
+    } else {
+      router.push('/cart')
+    }
+  }, [onToggleCart, router])
+
+  const isActive = (path: string) => pathname === path
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 lg:px-8 h-16 bg-[#1A1612]/80 backdrop-blur-xl border-b border-[#C9A96E]/20">
-      {/* Mobile hamburger */}
-      <button
-        onClick={handleToggleSidebar}
-        className="lg:hidden flex items-center justify-center w-10 h-10 text-[#E8D5B0] hover:text-[#C9A96E] transition-colors"
-        aria-label={sidebarOpen ? 'Fechar menu' : 'Abrir menu'}
-      >
-        {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
+    <>
+      {/* ═══════════════════════════════════════════════════════
+          TOP HEADER — fixed, compact on mobile (h-14),
+          full height on desktop (h-16)
+          ═══════════════════════════════════════════════════════ */}
+      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 h-14 lg:h-16 bg-[#1A1612]/90 backdrop-blur-xl border-b border-[#C9A96E]/20">
+        {/* Logo — mobile: 'SN' gold | desktop: 'Stylo Nails' Cormorant */}
+        <Link
+          href="/"
+          onClick={(e) => {
+            e.stopPropagation()
+            tapAdmin()
+          }}
+          className="font-['Cormorant_Garamond',serif] text-xl lg:text-[1.5rem] leading-none text-[#C9A96E] hover:text-[#E8D5B0] transition-colors tracking-wide cursor-pointer select-none"
+        >
+          <span className="lg:hidden">SN</span>
+          <span className="hidden lg:inline">Stylo Nails</span>
+        </Link>
 
-      {/* Spacer to keep logo centered on mobile */}
-      <div className="lg:hidden w-10" />
+        {/* Desktop nav slot — reserved for future links */}
+        <nav className="hidden lg:flex items-center gap-8">
+          {/* Links serão adicionados posteriormente */}
+        </nav>
 
-      {/* Logo — admin easter egg: 5 clicks */}
-      <button
-        onClick={handleLogoClick}
-        className="font-['Cormorant_Garamond',serif] text-[1.5rem] leading-none text-[#C9A96E] hover:text-[#E8D5B0] transition-colors tracking-wide cursor-pointer bg-transparent border-none"
-      >
-        Stylo Nails
-      </button>
+        {/* Cart icon with badge — always visible in top header */}
+        <button
+          type="button"
+          onClick={handleCartClick}
+          className="relative flex items-center justify-center w-10 h-10 text-[#E8D5B0] hover:text-[#C9A96E] transition-colors"
+          aria-label="Carrinho de compras"
+        >
+          <ShoppingBag size={22} />
+          {totalItens > 0 && (
+            <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1 text-[11px] font-bold text-[#1A1612] bg-[#C9A96E] rounded-full leading-none">
+              {totalItens > 99 ? '99+' : totalItens}
+            </span>
+          )}
+        </button>
+      </header>
 
-      {/* Desktop navigation slot */}
-      <nav className="hidden lg:flex items-center gap-8">
-        {/* Links serão adicionados posteriormente */}
+      {/* ═══════════════════════════════════════════════════════
+          BOTTOM NAV — mobile only (lg:hidden)
+          Fixed bottom, 4 icons with gold active state
+          ═══════════════════════════════════════════════════════ */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-[#1A1612]/90 backdrop-blur-xl border-t border-[#C9A96E]/20 pb-[env(safe-area-inset-bottom,0px)]">
+        <div className="flex items-center justify-around h-full px-2">
+          {/* 🏠 Home */}
+          <Link
+            href="/"
+            className={`flex flex-col items-center justify-center w-14 h-full text-[10px] tracking-wide transition-colors ${
+              isActive('/')
+                ? 'text-[#C9A96E]'
+                : 'text-[#E8D5B0]/60 hover:text-[#E8D5B0]'
+            }`}
+          >
+            <span className="text-xl leading-none mb-0.5">🏠</span>
+            <span>Home</span>
+          </Link>
+
+          {/* 📂 Catálogo — abre sidebar */}
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            className="flex flex-col items-center justify-center w-14 h-full text-[10px] tracking-wide text-[#E8D5B0]/60 hover:text-[#E8D5B0] transition-colors"
+          >
+            <span className="text-xl leading-none mb-0.5">📂</span>
+            <span>Catálogo</span>
+          </button>
+
+          {/* 🛒 Carrinho — abre cart panel */}
+          <button
+            type="button"
+            onClick={handleCartClick}
+            className="relative flex flex-col items-center justify-center w-14 h-full text-[10px] tracking-wide text-[#E8D5B0]/60 hover:text-[#E8D5B0] transition-colors"
+          >
+            <span className="text-xl leading-none mb-0.5">🛒</span>
+            <span>Carrinho</span>
+            {totalItens > 0 && (
+              <span className="absolute top-0 right-2 flex items-center justify-center min-w-[14px] h-3.5 px-0.5 text-[8px] font-bold text-[#1A1612] bg-[#C9A96E] rounded-full leading-none">
+                {totalItens > 99 ? '99+' : totalItens}
+              </span>
+            )}
+          </button>
+
+          {/* ✨ Admin — hidden (opacity-0), 5 taps to reveal /admin */}
+          <button
+            type="button"
+            onClick={tapAdmin}
+            className="flex flex-col items-center justify-center w-14 h-full text-[10px] tracking-wide text-[#E8D5B0]/60 opacity-0 pointer-events-auto transition-colors"
+            aria-label="Admin"
+          >
+            <span className="text-xl leading-none mb-0.5">✨</span>
+            <span>Admin</span>
+          </button>
+        </div>
       </nav>
 
-      {/* Cart button with badge */}
-      <Link
-        href="/cart"
-        className="relative flex items-center justify-center w-10 h-10 text-[#E8D5B0] hover:text-[#C9A96E] transition-colors"
-        aria-label="Carrinho de compras"
-      >
-        <ShoppingBag size={22} />
-        {totalItens > 0 && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1 text-[11px] font-bold text-[#1A1612] bg-[#C9A96E] rounded-full">
-            {totalItens > 99 ? '99+' : totalItens}
-          </span>
-        )}
-      </Link>
-    </header>
+      {/* Spacer compensating for fixed bottom nav on mobile */}
+      <div className="lg:hidden h-16" />
+    </>
   )
 }

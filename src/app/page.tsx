@@ -9,9 +9,6 @@ import ProductCard from '@/components/product-card'
 import type { Categoria, Produto } from '@/types'
 import { getCategorias, getProdutos } from '@/lib/queries'
 
-/* ──────────────────────────────────────────
-   Utilitário de preço para o toast
-   ────────────────────────────────────────── */
 function formatPrice(value: number): string {
   return value.toLocaleString('pt-BR', {
     style: 'currency',
@@ -25,11 +22,11 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [cartOpen, setCartOpen] = useState(false)
 
-  /* ── Fetch real data from Supabase on mount ── */
   useEffect(() => {
     let cancelled = false
-
     async function loadData() {
       try {
         const [cats, prods] = await Promise.all([
@@ -42,19 +39,15 @@ export default function Home() {
         }
       } catch (err) {
         console.error('Erro ao carregar dados:', err)
-        if (!cancelled) {
-          setError('Não foi possível carregar os dados.')
-        }
+        if (!cancelled) setError('Não foi possível carregar os dados.')
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
-
     loadData()
     return () => { cancelled = true }
   }, [])
 
-  /* Filtra destaques + produtos por categoria */
   const destaques = useMemo(
     () => produtos.filter((p) => p.ativo && p.destaque),
     [produtos],
@@ -76,18 +69,17 @@ export default function Home() {
       produto.promocao && produto.preco_promocional
         ? produto.preco_promocional
         : produto.preco
-    toast.success(`${produto.nome} adicionado ao carrinho`, {
+    toast.success(`${produto.nome} adicionado`, {
       description: `${formatPrice(preco)} — 1 un.`,
       duration: 3000,
     })
   }
 
-  /* ── Loading state ── */
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col bg-[#1A1612] text-[#F8F1E9]">
-        <Header />
-        <div className="flex flex-1 items-center justify-center pt-16">
+        <Header onToggleSidebar={() => {}} onToggleCart={() => {}} />
+        <div className="flex flex-1 items-center justify-center pt-14 lg:pt-16">
           <div className="text-center">
             <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#C9A96E] border-t-transparent" />
             <p className="text-[#E8D5B0]/70">Carregando...</p>
@@ -97,12 +89,11 @@ export default function Home() {
     )
   }
 
-  /* ── Error state ── */
   if (error) {
     return (
       <div className="flex min-h-screen flex-col bg-[#1A1612] text-[#F8F1E9]">
-        <Header />
-        <div className="flex flex-1 items-center justify-center pt-16">
+        <Header onToggleSidebar={() => {}} onToggleCart={() => {}} />
+        <div className="flex flex-1 items-center justify-center pt-14 lg:pt-16">
           <div className="max-w-md text-center">
             <p className="mb-4 text-4xl">😕</p>
             <p className="mb-2 text-lg text-[#E8D5B0]">{error}</p>
@@ -115,15 +106,13 @@ export default function Home() {
     )
   }
 
-  /* ── Empty state (dados carregaram mas não há nada) ── */
-  const hasCategorias = categorias.length > 0
-  const hasProdutos = produtos.length > 0
+  const hasData = categorias.length > 0 || produtos.length > 0
 
-  if (!hasCategorias && !hasProdutos) {
+  if (!hasData) {
     return (
       <div className="flex min-h-screen flex-col bg-[#1A1612] text-[#F8F1E9]">
-        <Header />
-        <div className="flex flex-1 items-center justify-center pt-16">
+        <Header onToggleSidebar={() => {}} onToggleCart={() => {}} />
+        <div className="flex flex-1 items-center justify-center pt-14 lg:pt-16">
           <div className="max-w-md text-center">
             <p className="mb-4 text-4xl">🛍️</p>
             <p className="mb-2 text-lg text-[#E8D5B0]">
@@ -138,10 +127,8 @@ export default function Home() {
     )
   }
 
-  /* ── Main layout with real data ── */
   return (
     <div className="flex min-h-screen flex-col bg-[#1A1612] text-[#F8F1E9]">
-      {/* Toaster global */}
       <Toaster
         position="top-right"
         toastOptions={{
@@ -153,12 +140,34 @@ export default function Home() {
         }}
       />
 
-      {/* Header fixo no topo */}
-      <Header />
+      <Header
+        onToggleSidebar={() => setSidebarOpen((v) => !v)}
+        onToggleCart={() => setCartOpen((v) => !v)}
+      />
 
-      {/* Layout principal: Sidebar | Conteúdo | CartPanel */}
-      <div className="flex flex-1 pt-16">
-        {/* Sidebar (esquerda) — fixa em desktop */}
+      {/* Scrim do sidebar mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar como drawer no mobile */}
+      <aside
+        className={`fixed left-0 top-14 z-40 h-[calc(100vh-3.5rem)] w-72 overflow-y-auto transition-transform duration-300 lg:static lg:top-auto lg:z-auto lg:block lg:h-auto lg:w-auto lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <Sidebar
+          categorias={categorias}
+          categoriaAtiva={categoriaAtiva}
+        />
+      </aside>
+
+      {/* Main content */}
+      <div className="flex flex-1 pt-14 lg:pt-16">
+        {/* Sidebar desktop */}
         <aside className="hidden lg:block">
           <Sidebar
             categorias={categorias}
@@ -166,38 +175,36 @@ export default function Home() {
           />
         </aside>
 
-        {/* Conteúdo central (scrollável) */}
-        <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-6 lg:px-10">
-          {/* ── Banner / Hero ── */}
-          <section className="relative mb-12 overflow-hidden rounded-2xl border border-[#C9A96E]/15 bg-gradient-to-br from-[#2E2820] via-[#3A3228] to-[#2E2820] p-8 sm:p-12">
+        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
+          {/* Hero */}
+          <section className="animate-fade-in relative mb-10 overflow-hidden rounded-2xl border border-[#C9A96E]/15 bg-gradient-to-br from-[#2E2820] via-[#3A3228] to-[#2E2820] p-6 sm:p-10 lg:p-12">
             <div className="relative z-10 max-w-xl">
-              <h2 className="mb-3 font-serif text-3xl font-bold text-[#C9A96E] sm:text-4xl">
+              <h2 className="mb-3 font-serif text-2xl font-bold text-[#C9A96E] sm:text-3xl lg:text-4xl">
                 Beleza que começa nas pontas dos dedos 💅
               </h2>
-              <p className="mb-6 text-lg text-[#E8D5B0]/80">
+              <p className="mb-6 text-base text-[#E8D5B0]/80 sm:text-lg">
                 Produtos premium para unhas impecáveis. Explore nossa linha
-                exclusiva de esmaltes, alongamentos e cuidados.
+                exclusiva.
               </p>
               <a
                 href="#destaques"
-                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#B8860B] to-[#DAA520] px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:brightness-110 active:scale-[0.98]"
+                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#B8860B] to-[#DAA520] px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:brightness-110 hover:shadow-lg hover:shadow-[#C9A96E]/20 active:scale-[0.98]"
               >
                 Ver Destaques
               </a>
             </div>
-            {/* Decoração sutil */}
-            <div className="absolute -bottom-8 -right-8 text-[120px] opacity-[0.06] select-none">
+            <div className="absolute -bottom-8 -right-8 select-none text-[100px] opacity-[0.06] sm:text-[120px]">
               💅
             </div>
           </section>
 
-          {/* ── Produtos em Destaque ── */}
+          {/* Destaques */}
           {destaques.length > 0 && (
-            <section id="destaques" className="mb-14">
-              <h2 className="mb-6 font-serif text-2xl font-semibold text-[#C9A96E]">
+            <section id="destaques" className="mb-12">
+              <h2 className="gold-gradient-text mb-5 font-serif text-xl font-semibold sm:text-2xl">
                 ✨ Produtos em Destaque
               </h2>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {destaques.map((produto) => (
                   <div key={produto.id} onClick={() => handleAddWithToast(produto)}>
                     <ProductCard produto={produto} />
@@ -207,15 +214,15 @@ export default function Home() {
             </section>
           )}
 
-          {/* ── Categorias como seções ── */}
+          {/* Categorias */}
           {categorias
             .filter((cat) => cat.ativo && produtosPorCategoria.has(cat.id))
             .map((categoria) => {
               const prods = produtosPorCategoria.get(categoria.id)!
               return (
-                <section key={categoria.id} className="mb-14">
-                  <div className="mb-2 flex items-baseline justify-between">
-                    <h2 className="font-serif text-xl font-semibold text-[#C9A96E]">
+                <section key={categoria.id} className="mb-12">
+                  <div className="mb-4 flex items-baseline justify-between">
+                    <h2 className="font-serif text-lg font-semibold text-[#C9A96E] sm:text-xl">
                       {categoria.nome}
                     </h2>
                     {categoria.descricao && (
@@ -224,7 +231,7 @@ export default function Home() {
                       </span>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {prods.map((produto) => (
                       <div key={produto.id} onClick={() => handleAddWithToast(produto)}>
                         <ProductCard produto={produto} />
@@ -236,11 +243,31 @@ export default function Home() {
             })}
         </main>
 
-        {/* CartPanel (direita) — fixo */}
+        {/* CartPanel desktop */}
         <aside className="hidden xl:block">
           <CartPanel />
         </aside>
       </div>
+
+      {/* CartPanel mobile - bottom sheet */}
+      <div className={`fixed inset-0 z-50 lg:hidden ${cartOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+        {cartOpen && (
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setCartOpen(false)}
+          />
+        )}
+        <div
+          className={`absolute bottom-0 left-0 right-0 transition-transform duration-300 ${
+            cartOpen ? 'translate-y-0' : 'translate-y-full'
+          }`}
+        >
+          <CartPanel isOpen={cartOpen} onClose={() => setCartOpen(false)} />
+        </div>
+      </div>
+
+      {/* Bottom spacer para nav no mobile */}
+      <div className="h-16 lg:hidden" />
     </div>
   )
 }

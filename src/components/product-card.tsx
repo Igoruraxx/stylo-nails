@@ -52,14 +52,17 @@ export default function ProductCard({ produto }: ProductCardProps) {
       : produto.preco
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-xl bg-[#2E2820] transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-black/30">
-      {/* ── Image placeholder (gradient based on category) ── */}
+    <div className="group relative flex flex-col overflow-hidden rounded-xl border border-white/5 bg-[#2E2820]/60 backdrop-blur-lg transition-all duration-300 hover:scale-[1.03] hover:border-[#C9A96E]/30 hover:shadow-xl hover:shadow-[#C9A96E]/10">
+      {/* ── Image placeholder (gradient based on category + shimmer overlay) ── */}
       <div
-        className={`relative flex h-44 items-center justify-center bg-gradient-to-br ${getGradient(produto.categoria_id)}`}
+        className={`relative flex h-48 items-center justify-center overflow-hidden bg-gradient-to-br ${getGradient(produto.categoria_id)}`}
       >
-        {/* Badge de promoção */}
+        {/* Shimmer animation overlay */}
+        <div className="shimmer pointer-events-none absolute inset-0" />
+
+        {/* Badge de promoção com pulse */}
         {produto.promocao && (
-          <span className="absolute left-3 top-3 z-10 rounded-full bg-red-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+          <span className="animate-pulse absolute left-3 top-3 z-10 rounded-full bg-red-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
             🔥 OFERTA
           </span>
         )}
@@ -69,20 +72,22 @@ export default function ProductCard({ produto }: ProductCardProps) {
       </div>
 
       {/* ── Card body ── */}
-      <div className="flex flex-1 flex-col gap-2 p-4">
-        {/* Nome (Jost medium) */}
-        <h3 className="truncate font-medium text-[#F8F1E9]">{produto.nome}</h3>
+      <div className="flex flex-1 flex-col gap-3 p-5">
+        {/* Nome (Cormorant serif para toque premium) */}
+        <h3 className="truncate font-serif text-lg font-semibold leading-tight text-[#F8F1E9]">
+          {produto.nome}
+        </h3>
 
         {/* Descrição curta */}
         {produto.descricao && (
-          <p className="line-clamp-2 text-sm leading-relaxed text-white/60">
+          <p className="line-clamp-2 text-sm leading-relaxed text-white/50">
             {produto.descricao}
           </p>
         )}
 
-        {/* Preços */}
+        {/* Preços — gold gradient text */}
         <div className="mt-auto flex items-baseline gap-2">
-          <span className="text-lg font-bold text-[#C9A96E]">
+          <span className="gold-gradient-text text-xl font-bold tracking-tight">
             {formatPrice(precoAtual)}
           </span>
           {produto.promocao && produto.preco_promocional != null && (
@@ -92,10 +97,10 @@ export default function ProductCard({ produto }: ProductCardProps) {
           )}
         </div>
 
-        {/* Botão Adicionar */}
+        {/* Botão Adicionar com glow hover */}
         <button
           onClick={() => adicionar(produto)}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-[#C9A96E] px-4 py-2.5 text-sm font-semibold text-[#1A1612] transition-all hover:bg-[#DAA520] active:scale-[0.97]"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-[#C9A96E] px-4 py-2.5 text-sm font-semibold text-[#1A1612] transition-all hover:bg-[#DAA520] hover:shadow-lg hover:shadow-[#C9A96E]/20 active:scale-[0.97]"
         >
           <Plus size={18} aria-hidden="true" />
           Adicionar

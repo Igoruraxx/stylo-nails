@@ -10,7 +10,173 @@
   --font-serif: var(--font-cormorant), "Cormorant Garamond", serif;
 }
 
+/* ── Smooth Scroll ──────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Custom Selection (Gold) ────────────────────────────────── */
+::selection {
+  background: var(--color-gold);
+  color: var(--color-background);
+  text-shadow: none;
+}
+
+::-moz-selection {
+  background: var(--color-gold);
+  color: var(--color-background);
+  text-shadow: none;
+}
+
+/* ── Premium Gold Scrollbar ─────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #C9A96E, #B8944F);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #D4B87A, #C9A96E);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #C9A96E transparent;
+}
+
+/* ── Body ───────────────────────────────────────────────────── */
 body {
   background: var(--color-background);
   color: var(--color-foreground);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILITY CLASSES
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Glass Effect ──────────────────────────────────────────── */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ── Gold Gradient Text ────────────────────────────────────── */
+.gold-gradient-text {
+  background: linear-gradient(
+    135deg,
+    #C9A96E 0%,
+    #E8D5B0 40%,
+    #F8F1E9 60%,
+    #C9A96E 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── Premium Shadow ────────────────────────────────────────── */
+.premium-shadow {
+  box-shadow:
+    0 4px 24px rgba(201, 169, 110, 0.15),
+    0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   KEYFRAME ANIMATIONS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Fade In ───────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Slide Up ──────────────────────────────────────────────── */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Shimmer (Animated Loading Gradient) ───────────────────── */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ── Float ─────────────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* ── Shimmer Utility (for skeleton loading states) ─────────── */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(201, 169, 110, 0.05) 0%,
+    rgba(201, 169, 110, 0.2) 40%,
+    rgba(201, 169, 110, 0.05) 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* ── Animation Utility Classes ─────────────────────────────── */
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.6s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   REDUCED MOTION PREFERENCES
+   ═══════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -89,7 +89,7 @@ async function main() {
 
   console.log('🔍 Verificando Google Photos...')
   try {
-    run('rclone lsd gphotos: 2>/dev/null')
+    run('rclone lsd gphotos:album 2>/dev/null')
     console.log('   ✅ Google Photos configurado!')
   } catch {
     console.log()
@@ -112,7 +112,7 @@ async function main() {
 
   // 2. Listar álbuns
   console.log('\n📂 Listando álbuns do Google Fotos...')
-  const albumOutput = run('rclone lsd gphotos:')
+  const albumOutput = run('rclone lsd gphotos:album/')
   const albumLines = parseRcloneList(albumOutput)
 
   // Parse: rclone lsd mostra "-1 2024-01-01 12:34:00 -1 Nome do Album"

@@ -17,6 +17,7 @@ export default function CategoriaPage() {
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -89,7 +90,7 @@ export default function CategoriaPage() {
   return (
     <>
       <Header />
-      <StoreLayout categorias={categorias}>
+      <StoreLayout categorias={categorias} sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen(v => !v)}>
         <div className="px-4 py-8 sm:px-6 lg:px-10">
           <nav className="mb-6 text-sm text-white/50" aria-label="Breadcrumb">
             <Link href="/" className="transition-colors hover:text-[#C9A96E]">Home</Link>

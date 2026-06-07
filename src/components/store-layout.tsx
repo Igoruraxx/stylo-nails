@@ -8,9 +8,16 @@ import type { Categoria } from '@/types'
 interface StoreLayoutProps {
   categorias: Categoria[]
   children: React.ReactNode
+  sidebarOpen: boolean
+  onToggleSidebar: () => void
 }
 
-export default function StoreLayout({ categorias, children }: StoreLayoutProps) {
+export default function StoreLayout({
+  categorias,
+  children,
+  sidebarOpen,
+  onToggleSidebar,
+}: StoreLayoutProps) {
   const pathname = usePathname()
 
   // Extract active category slug from /categoria/[slug]
@@ -21,29 +28,27 @@ export default function StoreLayout({ categorias, children }: StoreLayoutProps) 
   return (
     <>
       <style>{`
+        /* ── Mobile-first: stacked single-column ── */
         .store-grid {
           display: grid;
           min-height: 100vh;
-          /* Mobile: single column, everything stacked */
           grid-template-columns: 1fr;
-          grid-template-rows: auto auto 1fr auto auto;
+          grid-template-rows: auto 1fr auto;
           grid-template-areas:
             'hd'
-            'sb'
             'main'
-            'rp'
             'ft';
         }
 
+        /* ── Desktop: 3‑column with sb / main / rp ── */
         @media (min-width: 1024px) {
           .store-grid {
-            /* Desktop: 3-column layout as specified */
             grid-template-columns: 220px 1fr 272px;
             grid-template-rows: auto 1fr auto;
             grid-template-areas:
-              'hd hd hd'
-              'sb main rp'
-              'ft ft ft';
+              'hd  hd  hd'
+              'sb  main rp'
+              'ft  ft  ft';
           }
         }
       `}</style>
@@ -54,8 +59,42 @@ export default function StoreLayout({ categorias, children }: StoreLayoutProps) 
              This spacer accounts for its height so content isn't hidden. ── */}
         <div style={{ gridArea: 'hd' }} className="h-16" />
 
-        {/* ── Sidebar ── */}
-        <aside style={{ gridArea: 'sb' }} className="overflow-hidden">
+        {/* ── Mobile sidebar drawer (slide-in) ── */}
+        <div
+          className={`
+            fixed inset-0 z-40
+            ${sidebarOpen ? 'pointer-events-auto' : 'pointer-events-none'}
+            lg:hidden
+          `}
+          onClick={onToggleSidebar}
+        >
+          {/* Scrim overlay */}
+          <div
+            className={`
+              absolute inset-0 bg-black/60 transition-opacity duration-300
+              ${sidebarOpen ? 'opacity-100' : 'opacity-0'}
+            `}
+          />
+
+          {/* Drawer panel */}
+          <aside
+            className={`
+              absolute left-0 top-0 h-full w-72
+              bg-[#0d0d0d] shadow-2xl
+              transition-transform duration-300 ease-in-out
+              ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+            `}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Sidebar categorias={categorias} categoriaAtiva={categoriaAtiva} />
+          </aside>
+        </div>
+
+        {/* ── Desktop sidebar ── */}
+        <aside
+          style={{ gridArea: 'sb' }}
+          className="hidden overflow-hidden lg:block"
+        >
           <Sidebar categorias={categorias} categoriaAtiva={categoriaAtiva} />
         </aside>
 
@@ -67,8 +106,13 @@ export default function StoreLayout({ categorias, children }: StoreLayoutProps) 
           {children}
         </main>
 
-        {/* ── Cart Panel ── */}
-        <aside style={{ gridArea: 'rp' }} className="overflow-hidden">
+        {/* ── Desktop CartPanel ──
+             On mobile the cart is rendered as a bottom sheet managed
+             externally by the parent. ── */}
+        <aside
+          style={{ gridArea: 'rp' }}
+          className="hidden overflow-hidden lg:block"
+        >
           <CartPanel />
         </aside>
 
