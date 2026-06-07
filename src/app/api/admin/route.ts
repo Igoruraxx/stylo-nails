@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const adminPassword = process.env.ADMIN_PASSWORD || ''
 
 const supabase = createClient(supabaseUrl, serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -13,7 +14,7 @@ type TableName = 'categorias' | 'produtos'
 const ALLOWED_TABLES: TableName[] = ['categorias', 'produtos']
 
 function checkAuth(password: string) {
-  return password === 'admin123'
+  return password === adminPassword
 }
 
 /* ── UPDATE (PUT) ── */

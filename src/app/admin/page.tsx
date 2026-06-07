@@ -1,12 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Pencil, LogOut, Eye, ArrowLeft, ShoppingBag, Tag, Save, X, Star, Plus, Upload, GripVertical } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import type { Categoria, Produto } from '@/types'
-
-const supabase = createClient()
-const PASS = 'admin123'
 
 function formatPrice(value: number): string {
   return value.toLocaleString('pt-BR', {
@@ -16,18 +13,60 @@ function formatPrice(value: number): string {
 }
 
 /* ─── Login Screen ─── */
-function LoginScreen({ onLogin }: { onLogin: () => void }) {
+function LoginScreen({ onLogin }: { onLogin: (pw: string) => void }) {
   const [senha, setSenha] = useState('')
-  const [erro, setErro] = useState(false)
+  const [erro, setErro] = useState('')
+  const [tentativas, setTentativas] = useState(0)
+  const [bloqueado, setBloqueado] = useState(false)
+  const [bloqueadoAte, setBloqueadoAte] = useState(0)
+
+  const verificarSenha = async (pw: string) => {
+    setErro('')
+    setBloqueado(false)
+    
+    // Testa a senha contra a API
+    try {
+      const res = await fetch('/api/admin', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          table: 'categorias', 
+          id: 5, 
+          data: { nome: 'Brocas' }, 
+          password: pw 
+        }),
+      })
+      if (res.ok) {
+        onLogin(pw)
+        return
+      }
+      const json = await res.json()
+      throw new Error(json.error || 'Senha incorreta')
+    } catch {
+      const novas = tentativas + 1
+      setTentativas(novas)
+      
+      if (novas >= 5) {
+        setBloqueado(true)
+        setBloqueadoAte(Date.now() + 15000)
+        setErro(`⚠️ Muitas tentativas. Aguarde 15 segundos.`)
+        setTimeout(() => { setBloqueado(false); setTentativas(0) }, 15000)
+      } else if (novas >= 3) {
+        setBloqueado(true)
+        setBloqueadoAte(Date.now() + 5000)
+        setErro(`⚠️ Aguarde 5 segundos para tentar novamente.`)
+        setTimeout(() => { setBloqueado(false) }, 5000)
+      } else {
+        setErro(`Senha incorreta. Tentativa ${novas}/5.`)
+      }
+      setSenha('')
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (senha === PASS) {
-      onLogin()
-    } else {
-      setErro(true)
-      setSenha('')
-    }
+    if (bloqueado) return
+    verificarSenha(senha)
   }
 
   return (
@@ -37,7 +76,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
         className="w-full max-w-sm rounded-2xl border border-[#C9A96E]/20 bg-[#2E2820] p-8 shadow-2xl"
       >
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#C9A96E] to-[#B8860B] text-2xl">🔒</div>
+          <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#C9A96E] to-[#B8860B] text-2xl ${bloqueado ? 'animate-pulse' : ''}`}>🔒</div>
           <h1 className="font-serif text-2xl font-bold text-[#C9A96E]">Painel Administrativo</h1>
           <p className="mt-1 text-sm text-[#E8D5B0]/60">Stylo Nails — Área Restrita</p>
         </div>
@@ -47,14 +86,18 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
             id="admin-password"
             type="password"
             value={senha}
-            onChange={(e) => { setSenha(e.target.value); setErro(false) }}
+            onChange={(e) => { setSenha(e.target.value); setErro('') }}
             placeholder="Digite a senha"
             autoFocus
-            className={`w-full rounded-lg border bg-[#1A1612] px-4 py-3 text-sm text-[#F8F1E9] placeholder-[#E8D5B0]/30 outline-none transition-colors focus:ring-2 focus:ring-[#C9A96E]/50 ${erro ? 'border-red-500' : 'border-[#C9A96E]/20'}`}
+            disabled={bloqueado}
+            className={`w-full rounded-lg border bg-[#1A1612] px-4 py-3 text-sm text-[#F8F1E9] placeholder-[#E8D5B0]/30 outline-none transition-colors focus:ring-2 focus:ring-[#C9A96E]/50 disabled:opacity-50 ${erro ? 'border-red-500' : 'border-[#C9A96E]/20'}`}
           />
-          {erro && <p className="mt-2 text-xs text-red-400">Senha incorreta. Tente novamente.</p>}
+          {erro && <p className="mt-2 text-xs text-red-400">{erro}</p>}
         </div>
-        <button type="submit" className="w-full rounded-lg bg-gradient-to-r from-[#B8860B] to-[#DAA520] px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:brightness-110 active:scale-[0.98]">Entrar</button>
+        <button type="submit" disabled={bloqueado}
+          className="w-full rounded-lg bg-gradient-to-r from-[#B8860B] to-[#DAA520] px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed">
+          {bloqueado ? 'Aguarde...' : 'Entrar'}
+        </button>
       </form>
     </div>
   )
@@ -91,11 +134,13 @@ function PreviewCard({ produto }: { produto: Produto }) {
 }
 
 /* ─── Admin Panel ─── */
-function AdminPanel({ onLogout }: { onLogout: () => void }) {
+function AdminPanel({ onLogout, adminPassword }: { onLogout: () => void; adminPassword: string }) {
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [loading, setLoading] = useState(true)
   const [secao, setSecao] = useState<'categorias' | 'produtos' | 'preview'>('categorias')
+
+  const supabase = useMemo(() => createClient(), [])
 
   // Edit state - categoria
   const [editCatId, setEditCatId] = useState<number | null>(null)
@@ -161,7 +206,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       const res = await fetch('/api/admin', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table, id, data, password: PASS }),
+        body: JSON.stringify({ table, id, data, password: adminPassword }),
       })
       if (!res.ok) throw new Error(await res.text())
       showFeedback('✅ Salvo!')
@@ -178,7 +223,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       const res = await fetch('/api/admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table, data, password: PASS, action: 'insert' }),
+        body: JSON.stringify({ table, data, password: adminPassword, action: 'insert' }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error)
@@ -254,7 +299,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       fetch('/api/admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table: 'categorias', action: 'reorder', data: reordered.map(c => ({ id: c.id, ordem: c.ordem })), password: PASS }),
+        body: JSON.stringify({ table: 'categorias', action: 'reorder', data: reordered.map(c => ({ id: c.id, ordem: c.ordem })), password: adminPassword }),
       })
       return reordered
     })
@@ -882,6 +927,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 /* ─── Page ─── */
 export default function AdminPage() {
   const [logado, setLogado] = useState(false)
-  if (!logado) return <LoginScreen onLogin={() => setLogado(true)} />
-  return <AdminPanel onLogout={() => setLogado(false)} />
+  const [adminPassword, setAdminPassword] = useState('')
+  if (!logado) return <LoginScreen onLogin={(pw) => { setLogado(true); setAdminPassword(pw) }} />
+  return <AdminPanel onLogout={() => setLogado(false)} adminPassword={adminPassword} />
 }
