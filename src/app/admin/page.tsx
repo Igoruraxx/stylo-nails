@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { ChevronUp, ChevronDown, Pencil, LogOut, Eye, ArrowLeft, ShoppingBag, Tag, Save, X, Star, Plus, Upload } from 'lucide-react'
+import { Pencil, LogOut, Eye, ArrowLeft, ShoppingBag, Tag, Save, X, Star, Plus, Upload, GripVertical } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import type { Categoria, Produto } from '@/types'
 
@@ -133,6 +133,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [editModalImgPreview, setEditModalImgPreview] = useState('')
   const editFileInputRef = useRef<HTMLInputElement>(null)
 
+  // Drag state
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+
   const showFeedback = (msg: string) => {
     setFeedback(msg)
     setTimeout(() => setFeedback(''), 2500)
@@ -240,16 +243,14 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     }
   }
 
-  const moveCat = async (id: number, dir: 'up' | 'down') => {
+  const reorderCats = useCallback((fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx) return
     setCategorias(prev => {
-      const idx = prev.findIndex(c => c.id === id)
-      if (idx === -1) return prev
-      if (dir === 'up' && idx === 0) return prev
-      if (dir === 'down' && idx === prev.length - 1) return prev
       const arr = [...prev]
-      const swap = dir === 'up' ? idx - 1 : idx + 1
-      ;[arr[idx], arr[swap]] = [arr[swap], arr[idx]]
+      const [moved] = arr.splice(fromIdx, 1)
+      arr.splice(toIdx, 0, moved)
       const reordered = arr.map((c, i) => ({ ...c, ordem: i + 1 }))
+      // Save reorder to server
       fetch('/api/admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -257,7 +258,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       })
       return reordered
     })
-  }
+  }, [])
 
   /* ── Produto handlers ── */
   const openEditModal = (prod: Produto) => {
@@ -465,8 +466,32 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
             <div className="space-y-2">
               {categorias.map((cat, idx) => (
-                <div key={cat.id} className="flex items-center gap-3 rounded-xl border border-[#C9A96E]/10 bg-[#2E2820] px-4 py-3 transition-all hover:border-[#C9A96E]/20">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#1A1612] text-xs font-bold text-[#C9A96E]/60">{idx + 1}</span>
+                <div key={cat.id}
+                  draggable={editCatId !== cat.id}
+                  onDragStart={e => { setDragIdx(idx); e.dataTransfer.effectAllowed = 'move'; }}
+                  onDragOver={e => {
+                    e.preventDefault()
+                    e.dataTransfer.dropEffect = 'move'
+                  }}
+                  onDrop={e => {
+                    e.preventDefault()
+                    if (dragIdx !== null && dragIdx !== idx) {
+                      reorderCats(dragIdx, idx)
+                    }
+                    setDragIdx(null)
+                  }}
+                  onDragEnd={() => setDragIdx(null)}
+                  className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-all cursor-default ${
+                    dragIdx === idx
+                      ? 'border-[#C9A96E]/50 bg-[#3A3228] shadow-lg shadow-[#C9A96E]/10 scale-[1.02]'
+                      : 'border-[#C9A96E]/10 bg-[#2E2820] hover:border-[#C9A96E]/20'
+                  }`}>
+                  {/* Drag handle */}
+                  <div className="flex cursor-grab active:cursor-grabbing items-center justify-center h-7 w-7 rounded-md bg-[#1A1612] text-[#C9A96E]/30 hover:text-[#C9A96E]/70 transition-colors"
+                    onDragStart={e => { setDragIdx(idx); e.dataTransfer.effectAllowed = 'move'; }}
+                    draggable={editCatId !== cat.id}>
+                    <GripVertical size={14} />
+                  </div>
 
                   {editCatId === cat.id ? (
                     <input type="text" value={editCatNome} onChange={e => setEditCatNome(e.target.value)}
@@ -478,15 +503,6 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                   <span className="text-xs text-[#E8D5B0]/40">{produtos.filter(p => p.categoria_id === cat.id).length} itens</span>
 
                   <div className="flex items-center gap-1">
-                    <button onClick={() => moveCat(cat.id, 'up')} disabled={idx === 0}
-                      className="rounded-md p-1.5 text-[#E8D5B0]/40 transition-all hover:bg-[#1A1612] hover:text-[#C9A96E] disabled:opacity-20 disabled:cursor-not-allowed">
-                      <ChevronUp size={16} />
-                    </button>
-                    <button onClick={() => moveCat(cat.id, 'down')} disabled={idx === categorias.length - 1}
-                      className="rounded-md p-1.5 text-[#E8D5B0]/40 transition-all hover:bg-[#1A1612] hover:text-[#C9A96E] disabled:opacity-20 disabled:cursor-not-allowed">
-                      <ChevronDown size={16} />
-                    </button>
-
                     {editCatId === cat.id ? (
                       <>
                         <button onClick={saveCat} className="rounded-md bg-green-500/10 p-1.5 text-green-400 transition-all hover:bg-green-500/20"><Save size={16} /></button>
