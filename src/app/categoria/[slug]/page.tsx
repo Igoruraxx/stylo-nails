@@ -24,13 +24,13 @@ async function fetchFrom<T>(table: string, query: string): Promise<T[]> {
 export default async function CategoriaPage({ params }: Props) {
   const { slug } = await params
 
-  const categorias = await fetchFrom<Categoria[]>('categorias', 'select=*&ativo=eq.true&order=ordem')
-  const catList = await fetchFrom<Categoria[]>('categorias', `select=*&slug=eq.${slug}&ativo=eq.true`)
+  const categorias = await fetchFrom<Categoria>('categorias', 'select=*&ativo=eq.true&order=ordem')
+  const catList = await fetchFrom<Categoria>('categorias', `select=*&slug=eq.${slug}&ativo=eq.true`)
 
   const categoria = catList[0]
   if (!categoria) notFound()
 
-  const produtos = await fetchFrom<Produto[]>('produtos', `select=*&categoria_id=eq.${categoria.id}&ativo=eq.true&order=ordem`)
+  const produtos = await fetchFrom<Produto>('produtos', `select=*&categoria_id=eq.${categoria.id}&ativo=eq.true&order=ordem`)
 
   return (
     <>
