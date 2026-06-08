@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Search, X, ShoppingBag } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { useCart } from '@/lib/cart-context'
+import Image from 'next/image'
 import type { Produto } from '@/types'
 
 function formatPrice(value: number): string {
@@ -125,7 +126,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   <div key={prod.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-white/[0.03]">
                     <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#2E2820]">
                       {prod.imagem_url ? (
-                        <img src={prod.imagem_url} alt={prod.nome} className="h-full w-full object-cover" loading="lazy" />
+                        <Image src={prod.imagem_url} alt={prod.nome} fill sizes="48px" className="object-cover" />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-lg opacity-30">💅</div>
                       )}

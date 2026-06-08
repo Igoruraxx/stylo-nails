@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { X, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
 import { useCart } from '@/lib/cart-context'
@@ -121,11 +122,13 @@ export default function CartPanel({ onClose }: CartPanelProps) {
                   {/* Imagem do produto */}
                   <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#1A1612]">
                     {item.produto.imagem_url ? (
-                      <img
+                      <Image
                         src={item.produto.imagem_url}
                         alt={item.produto.nome}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
+                        fill
+                        sizes="56px"
+                        className="object-cover"
+                        onError={(e) => { (e.target as HTMLElement).style.display = 'none' }}
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-xl opacity-30">

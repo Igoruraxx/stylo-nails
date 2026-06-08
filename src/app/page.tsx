@@ -1,20 +1,12 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Toaster, toast } from 'sonner'
+import { Toaster } from 'sonner'
 import { ArrowUpDown } from 'lucide-react'
 import Header from '@/components/header'
 import ProductCard from '@/components/product-card'
-import { useCart } from '@/lib/cart-context'
 import type { Categoria, Produto } from '@/types'
 import { getCategorias, getProdutos } from '@/lib/queries'
-
-function formatPrice(value: number): string {
-  return value.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  })
-}
 
 export default function Home() {
   const [categorias, setCategorias] = useState<Categoria[]>([])
@@ -61,17 +53,6 @@ export default function Home() {
     }
     return map
   }, [produtos])
-
-  const handleAddWithToast = (produto: Produto) => {
-    const preco =
-      produto.promocao && produto.preco_promocional
-        ? produto.preco_promocional
-        : produto.preco
-    toast.success(`${produto.nome} adicionado`, {
-      description: `${formatPrice(preco)} — 1 un.`,
-      duration: 3000,
-    })
-  }
 
   /* ── Sort dos produtos dentro de cada categoria ── */
   const sortedProdutosPorCategoria = useMemo(() => {
@@ -178,9 +159,11 @@ export default function Home() {
             loop
             muted
             playsInline
+            preload="auto"
             className="absolute inset-0 h-full w-full object-cover"
             poster="/logo-gold.png"
           >
+            <source src="/hero-bg-mobile.mp4" type="video/mp4" media="(max-width: 768px)" />
             <source src="/hero-bg.mp4" type="video/mp4" />
           </video>
 
@@ -211,11 +194,9 @@ export default function Home() {
             <h2 className="gold-gradient-text mb-5 font-serif text-xl font-semibold sm:text-2xl">
               ✨ Produtos em Destaque
             </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-fr">
               {destaques.map((produto) => (
-                <div key={produto.id} onClick={() => handleAddWithToast(produto)}>
-                  <ProductCard produto={produto} />
-                </div>
+                <ProductCard key={produto.id} produto={produto} />
               ))}
             </div>
           </section>
@@ -257,11 +238,9 @@ export default function Home() {
                     </span>
                   )}
                 </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-fr">
                   {prods.map((produto) => (
-                    <div key={produto.id} onClick={() => handleAddWithToast(produto)}>
-                      <ProductCard produto={produto} />
-                    </div>
+                    <ProductCard key={produto.id} produto={produto} />
                   ))}
                 </div>
               </section>

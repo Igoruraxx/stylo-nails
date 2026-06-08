@@ -264,11 +264,17 @@ function AdminPanel({ onLogout, adminPassword }: { onLogout: () => void; adminPa
   const uploadImage = async (file: File, pasta: string): Promise<string | null> => {
     setUploading(true)
     try {
-      const ext = file.name.split('.').pop() || 'jpg'
+      // Comprimir imagem no navegador antes de subir
+      const compressedBlob = await compressImage(file, 1200, 0.8)
+      
+      const ext = 'jpg'
       const fileName = `${pasta}/admin-${Date.now()}.${ext}`
       const { error: uploadErr } = await supabase.storage
         .from('produtos')
-        .upload(fileName, file, { upsert: true })
+        .upload(fileName, compressedBlob, { 
+          upsert: true,
+          contentType: 'image/jpeg',
+        })
       if (uploadErr) throw new Error(uploadErr.message)
       const { data: { publicUrl } } = supabase.storage.from('produtos').getPublicUrl(fileName)
       return publicUrl
@@ -278,6 +284,45 @@ function AdminPanel({ onLogout, adminPassword }: { onLogout: () => void; adminPa
     } finally {
       setUploading(false)
     }
+  }
+
+  /** Comprime imagem via Canvas: redimensiona pra maxSize + qualidade JPEG */
+  const compressImage = (file: File, maxSize: number, quality: number): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        // Calcular novas dimensões mantendo proporção
+        let { width, height } = img
+        if (width > maxSize || height > maxSize) {
+          const ratio = Math.min(maxSize / width, maxSize / height)
+          width = Math.round(width * ratio)
+          height = Math.round(height * ratio)
+        }
+        
+        // Desenhar no canvas e exportar como JPEG
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, width, height)
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob)
+            else reject(new Error('Falha ao comprimir imagem'))
+          },
+          'image/jpeg',
+          quality
+        )
+      }
+      img.onerror = () => reject(new Error('Falha ao carregar imagem'))
+      
+      // Ler o arquivo como DataURL
+      const reader = new FileReader()
+      reader.onload = (e) => { img.src = e.target?.result as string }
+      reader.onerror = () => reject(new Error('Falha ao ler arquivo'))
+      reader.readAsDataURL(file)
+    })
   }
 
   /* ── Categoria handlers ── */
